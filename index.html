@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quincee's</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      padding: 1rem;
+      max-width: 210mm;
+      margin: 0 auto;
+      background: #f8f8f8;
+      color: #222;
+      line-height: 1.4;
+      font-size: 15px;
+    }
+
+    .page {
+      max-width: 210mm;
+    }
+
+    .print-sheet {
+      display: contents;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .header .logo {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #222;
+    }
+
+    .tables-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .tile {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .tile .header {
+      margin-bottom: 0;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border: 1px solid #ddd;
+      font-size: 0.95rem;
+    }
+
+    thead th {
+      background: #e0e0e0;
+      font-weight: 600;
+    }
+
+    thead th:last-child {
+      text-align: right;
+    }
+
+    tbody td:last-child {
+      text-align: right;
+      font-weight: 500;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    .print-options {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .print-options label {
+      margin-right: 0.5rem;
+      font-weight: 500;
+    }
+
+    .print-options input {
+      width: 5rem;
+      padding: 0.35rem 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    @media print {
+      @page {
+        size: A4;
+        margin: 10mm;
+      }
+
+      html, body {
+        background: #fff;
+        margin: 0;
+        padding: 0;
+        font-size: 10pt;
+        height: 297mm;
+        width: 210mm;
+        overflow: hidden;
+      }
+
+      .page {
+        padding: 0;
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .print-sheet {
+        display: block;
+        position: absolute;
+        top: 10mm;
+        left: 10mm;
+        width: 190mm;
+        height: 277mm;
+        overflow: hidden;
+      }
+
+      .tables-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 4mm;
+        width: 190mm;
+        height: auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      .tile {
+        min-height: 0;
+        min-width: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 1mm;
+        page-break-inside: avoid;
+      }
+
+      .tile .card {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .tile .header {
+        padding: 1mm 2mm;
+        border-bottom: 1px solid #000;
+        flex-shrink: 0;
+      }
+
+      .header .logo {
+        width: 24px;
+        height: 24px;
+      }
+
+      h1 {
+        font-size: 7pt;
+      }
+
+      .card {
+        border: 1px solid #000;
+        box-shadow: none;
+      }
+
+      table {
+        width: 100%;
+        table-layout: fixed;
+        font-size: 7pt;
+      }
+
+      th,
+      td {
+        padding: 1.5mm 2mm;
+        border: 1px solid #333;
+        font-size: 7pt;
+        line-height: 1.2;
+      }
+
+      thead th {
+        background: #e0e0e0 !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #f5f5f5 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      tbody td:last-child {
+        color: #000;
+      }
+
+      .print-options {
+        display: none !important;
+      }
+
+      .tile.tile-hidden {
+        display: none !important;
+      }
+
+      body.print-multi-page .page,
+      body.print-multi-page html,
+      body.print-multi-page body {
+        height: auto !important;
+        overflow: visible !important;
+      }
+
+      body.print-multi-page .print-sheet {
+        position: static;
+        width: 190mm;
+        max-width: 190mm;
+        height: auto;
+        overflow: visible;
+        margin: 0 auto;
+      }
+
+      body.print-multi-page .tables-grid {
+        grid-template-rows: none;
+        grid-auto-rows: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-options">
+    <label for="table-count">Tables to print:</label>
+    <input type="number" id="table-count" min="1" value="4" aria-label="Number of tables to print">
+  </div>
+  <div class="page">
+  <div class="print-sheet">
+  <div class="tables-grid" id="tables-grid">
+    <div class="tile" id="tile-template">
+      <header class="header">
+        <img class="logo" src="logo.png" alt="Quincee's logo">
+        <h1>Quincee's - 09456895039 Globe</h1>
+      </header>
+    <div class="card">
+      <table>
+    <thead>
+      <tr>
+        <th>utan</th>
+        <th>presyo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>talong</td>
+        <td>₱70 per kilo</td>
+      </tr>
+      <tr>
+        <td>ahos</td>
+        <td>₱140 per kilo</td>
+      </tr>
+      <tr>
+        <td>bumbay</td>
+        <td>₱140 per kilo</td>
+      </tr>
+      <tr>
+        <td>carrots</td>
+        <td>₱120 per kilo</td>
+      </tr>
+      <tr>
+        <td>patatas</td>
+        <td>₱130 per kilo</td>
+      </tr>
+      <tr>
+        <td>luya</td>
+        <td>₱60 per kilo</td>
+      </tr>
+    </tbody>
+  </table>
+    </div>
+    </div>
+  </div>
+  </div>
+  </div>
+  <script>
+    (function () {
+      var grid = document.getElementById('tables-grid');
+      var countInput = document.getElementById('table-count');
+      var template = document.getElementById('tile-template');
+      if (!grid || !countInput || !template) return;
+
+      function syncTiles(count) {
+        var n = Math.max(1, parseInt(count, 10) || 1);
+        var current = grid.querySelectorAll('.tile');
+        if (current.length > n) {
+          for (var i = current.length - 1; i >= n; i--) {
+            current[i].parentNode.removeChild(current[i]);
+          }
+        } else if (current.length < n) {
+          var need = n - current.length;
+          for (var j = 0; j < need; j++) {
+            var clone = template.cloneNode(true);
+            clone.removeAttribute('id');
+            grid.appendChild(clone);
+          }
+        }
+      }
+
+      function getTiles() {
+        return grid.querySelectorAll('.tile');
+      }
+
+      function setGridRows(count) {
+        var rows = Math.ceil(count / 2);
+        grid.style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
+      }
+
+      countInput.addEventListener('input', function () {
+        var n = parseInt(this.value, 10);
+        if (n < 1) this.value = 1;
+      });
+
+      countInput.addEventListener('change', function () {
+        var n = parseInt(this.value, 10);
+        if (n < 1) this.value = 1;
+        syncTiles(n);
+        setGridRows(n);
+      });
+
+      syncTiles(countInput.value || 4);
+      setGridRows(parseInt(countInput.value, 10) || 4);
+
+      window.addEventListener('beforeprint', function () {
+        var count = Math.max(1, parseInt(countInput.value, 10) || 1);
+        countInput.value = count;
+        syncTiles(count);
+
+        document.body.classList.toggle('print-multi-page', count > 4);
+
+        grid.style.transformOrigin = 'top left';
+        grid.style.width = '190mm';
+        grid.style.height = 'auto';
+        grid.style.maxWidth = '190mm';
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = '1fr 1fr';
+        grid.style.gap = '4mm';
+
+        if (count <= 4) {
+          setGridRows(count);
+          requestAnimationFrame(function () {
+            var w = grid.offsetWidth;
+            var h = grid.offsetHeight;
+            var targetW = 190 * 3.78;
+            var targetH = 277 * 3.78;
+            var scale = Math.min(targetW / w, targetH / h, 1);
+            if (scale < 1) {
+              grid.style.transform = 'scale(' + scale + ')';
+              grid.style.width = (190 / scale) + 'mm';
+              grid.style.height = (277 / scale) + 'mm';
+            }
+          });
+        } else {
+          grid.style.gridTemplateRows = '';
+        }
+      });
+
+      window.addEventListener('afterprint', function () {
+        document.body.classList.remove('print-multi-page');
+        grid.style.transform = '';
+        grid.style.width = '';
+        grid.style.height = '';
+        grid.style.maxWidth = '';
+        grid.style.display = '';
+        grid.style.gridTemplateColumns = '';
+        grid.style.gridTemplateRows = '';
+        grid.style.gap = '';
+      });
+    })();
+  </script>
+</body>
+</html>
