@@ -125,6 +125,136 @@
       border-radius: 4px;
     }
 
+    .edit-prices-btn {
+      margin-left: 0.75rem;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #222;
+      background: #e8e8e8;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .edit-prices-btn:hover {
+      background: #ddd;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .modal-overlay[hidden] {
+      display: none;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      max-width: 360px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: auto;
+    }
+
+    .modal-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      color: #666;
+      padding: 0 0.25rem;
+    }
+
+    .modal-close:hover {
+      color: #222;
+    }
+
+    .modal-body {
+      padding: 1rem 1.25rem;
+    }
+
+    .modal-body .price-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .modal-body .price-row label {
+      flex: 0 0 100px;
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .modal-body .price-row input {
+      flex: 1;
+      padding: 0.4rem 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .modal-footer {
+      padding: 0.75rem 1.25rem;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .modal-footer button {
+      padding: 0.4rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .modal-save {
+      background: #333;
+      color: #fff;
+      border: none;
+    }
+
+    .modal-save:hover {
+      background: #222;
+    }
+
+    .modal-cancel {
+      background: #f0f0f0;
+      color: #222;
+      border: 1px solid #ccc;
+    }
+
+    .modal-cancel:hover {
+      background: #e0e0e0;
+    }
+
     @media print {
       @page {
         size: A4;
@@ -244,6 +374,11 @@
         display: none !important;
       }
 
+      .edit-prices-btn,
+      .modal-overlay {
+        display: none !important;
+      }
+
       .tile.tile-hidden {
         display: none !important;
       }
@@ -274,7 +409,24 @@
 <body>
   <div class="print-options">
     <label for="table-count">Tables to print:</label>
-    <input type="number" id="table-count" min="1" value="4" aria-label="Number of tables to print">
+    <input type="number" id="table-count" min="1" value="10" aria-label="Number of tables to print">
+    <button type="button" class="edit-prices-btn" id="edit-prices-btn">Edit prices</button>
+  </div>
+
+  <div class="modal-overlay" id="price-modal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit prices (per kilo)</h2>
+        <button type="button" class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- price rows injected by script -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="modal-cancel" id="modal-cancel">Cancel</button>
+        <button type="button" class="modal-save" id="modal-save">Save</button>
+      </div>
+    </div>
   </div>
   <div class="page">
   <div class="print-sheet">
@@ -369,8 +521,8 @@
         setGridRows(n);
       });
 
-      syncTiles(countInput.value || 4);
-      setGridRows(parseInt(countInput.value, 10) || 4);
+      syncTiles(countInput.value || 10);
+      setGridRows(parseInt(countInput.value, 10) || 10);
 
       window.addEventListener('beforeprint', function () {
         var count = Math.max(1, parseInt(countInput.value, 10) || 1);
@@ -417,6 +569,99 @@
         grid.style.gridTemplateRows = '';
         grid.style.gap = '';
       });
+
+      // --- Edit prices modal ---
+      var editBtn = document.getElementById('edit-prices-btn');
+      var modal = document.getElementById('price-modal');
+      var modalBody = document.getElementById('modal-body');
+      var modalClose = document.getElementById('modal-close');
+      var modalCancel = document.getElementById('modal-cancel');
+      var modalSave = document.getElementById('modal-save');
+
+      function getTemplateTbody() {
+        return template.querySelector('table tbody');
+      }
+
+      function getCurrentPrices() {
+        var tbody = getTemplateTbody();
+        if (!tbody) return [];
+        var rows = tbody.querySelectorAll('tr');
+        var items = [];
+        for (var i = 0; i < rows.length; i++) {
+          var cells = rows[i].querySelectorAll('td');
+          if (cells.length >= 2) {
+            items.push({
+              name: cells[0].textContent.trim(),
+              price: cells[1].textContent.trim()
+            });
+          }
+        }
+        return items;
+      }
+
+      function openModal() {
+        var items = getCurrentPrices();
+        modalBody.innerHTML = '';
+        for (var i = 0; i < items.length; i++) {
+          var row = document.createElement('div');
+          row.className = 'price-row';
+          var label = document.createElement('label');
+          label.textContent = items[i].name;
+          label.setAttribute('for', 'price-' + i);
+          var input = document.createElement('input');
+          input.type = 'text';
+          input.id = 'price-' + i;
+          input.value = items[i].price;
+          input.setAttribute('data-index', String(i));
+          row.appendChild(label);
+          row.appendChild(input);
+          modalBody.appendChild(row);
+        }
+        modal.hidden = false;
+      }
+
+      function closeModal() {
+        modal.hidden = true;
+      }
+
+      function savePrices() {
+        var inputs = modalBody.querySelectorAll('.price-row input');
+        var tbody = getTemplateTbody();
+        if (!tbody || !inputs.length) {
+          closeModal();
+          return;
+        }
+        var rows = tbody.querySelectorAll('tr');
+        for (var i = 0; i < inputs.length && i < rows.length; i++) {
+          var cells = rows[i].querySelectorAll('td');
+          if (cells.length >= 2) {
+            cells[1].textContent = inputs[i].value.trim() || cells[1].textContent;
+          }
+        }
+        var tiles = getTiles();
+        for (var t = 0; t < tiles.length; t++) {
+          var tileTbody = tiles[t].querySelector('table tbody');
+          if (!tileTbody) continue;
+          var tileRows = tileTbody.querySelectorAll('tr');
+          for (var i = 0; i < inputs.length && i < tileRows.length; i++) {
+            var cells = tileRows[i].querySelectorAll('td');
+            if (cells.length >= 2) {
+              cells[1].textContent = inputs[i].value.trim() || cells[1].textContent;
+            }
+          }
+        }
+        closeModal();
+      }
+
+      if (editBtn) editBtn.addEventListener('click', openModal);
+      if (modalClose) modalClose.addEventListener('click', closeModal);
+      if (modalCancel) modalCancel.addEventListener('click', closeModal);
+      if (modalSave) modalSave.addEventListener('click', savePrices);
+      if (modal) {
+        modal.addEventListener('click', function (e) {
+          if (e.target === modal) closeModal();
+        });
+      }
     })();
   </script>
 </body>
