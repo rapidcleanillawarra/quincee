@@ -142,6 +142,22 @@
       background: #ddd;
     }
 
+    .print-btn {
+      margin-left: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #222;
+      background: #e8e8e8;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .print-btn:hover {
+      background: #ddd;
+    }
+
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -376,6 +392,7 @@
       }
 
       .edit-prices-btn,
+      .print-btn,
       .modal-overlay {
         display: none !important;
       }
@@ -412,6 +429,7 @@
     <label for="table-count">Tables to print:</label>
     <input type="number" id="table-count" min="1" value="10" aria-label="Number of tables to print">
     <button type="button" class="edit-prices-btn" id="edit-prices-btn">Edit prices</button>
+    <button type="button" class="print-btn" id="print-btn">Print</button>
   </div>
 
   <div class="modal-overlay" id="price-modal" hidden>
@@ -656,6 +674,8 @@
 
       if (editBtn) editBtn.addEventListener('click', openModal);
       if (modalClose) modalClose.addEventListener('click', closeModal);
+      var printBtn = document.getElementById('print-btn');
+      if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
       if (modalCancel) modalCancel.addEventListener('click', closeModal);
       if (modalSave) modalSave.addEventListener('click', savePrices);
       if (modal) {
