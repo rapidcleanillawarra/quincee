@@ -22,6 +22,12 @@
 		showModal = false;
 	}
 
+	function handleKeydown(e) {
+		if (e.key === 'Escape' && showModal) {
+			closeModal();
+		}
+	}
+
 	function savePrices() {
 		templateItems = modalItems.map(item => ({ ...item }));
 		closeModal();
@@ -48,14 +54,20 @@
 </div>
 
 {#if showModal}
-	<div class="modal-overlay" onclick={(e) => e.target === e.currentTarget && closeModal()}>
+	<div 
+		class="modal-overlay" 
+		role="button"
+		tabindex="-1"
+		onclick={(e) => e.target === e.currentTarget && closeModal()}
+		onkeydown={handleKeydown}
+	>
 		<div class="modal">
 			<div class="modal-header">
 				<h2>Edit prices (per kilo)</h2>
 				<button type="button" class="modal-close" onclick={closeModal} aria-label="Close">&times;</button>
 			</div>
 			<div class="modal-body">
-				{#each modalItems as item, i}
+				{#each modalItems as item, i (item.name)}
 					<div class="price-row">
 						<label for="price-{i}">{item.name}</label>
 						<input type="text" id="price-{i}" bind:value={item.price}>
@@ -76,7 +88,7 @@
 			class="tables-grid" 
 			style:grid-template-rows={tableCount <= 4 ? `repeat(${Math.ceil(tableCount / 2)}, 1fr)` : ''}
 		>
-			{#each tiles as _, i}
+			{#each tiles as _, i (i)}
 				<div class="tile">
 					<header class="header">
 						<img class="logo" src="/logo.png" alt="Quincee's logo">
@@ -91,7 +103,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each templateItems as item}
+								{#each templateItems as item (item.name)}
 									<tr>
 										<td>{item.name}</td>
 										<td>{item.price}</td>
