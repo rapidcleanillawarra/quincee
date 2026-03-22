@@ -22,6 +22,7 @@
 	let isSaving = $state(false);
 	let orderId = $state(null);
 	let isLoading = $state(false);
+	let orderStatus = $state("quoted"); // quoted, unpaid, completed
 
 	// Derived state for totals
 	let grandTotal = $derived(
@@ -73,6 +74,7 @@
 			orderId = order.id;
 			selectedCustomerId = order.customer_id;
 			selectedCustomerName = order.customer_username;
+			orderStatus = order.status || 'quoted';
 
 			// Fetch items for this order
 			const { data: orderItems, error: itemsError } = await supabase
@@ -224,7 +226,7 @@
 						customer_id: customerId,
 						customer_username: selectedCustomerName,
 						total_amount: grandTotal,
-						status: 'completed'
+						status: orderStatus
 					})
 					.eq('id', orderId)
 					.select()
@@ -247,7 +249,7 @@
 						customer_id: customerId,
 						customer_username: selectedCustomerName, 
 						total_amount: grandTotal,
-						status: 'completed'
+						status: orderStatus
 					})
 					.select()
 					.single();
@@ -317,6 +319,7 @@
 			selectedCustomerName = "";
 			selectedCustomerId = null;
 			orderId = null;
+			orderStatus = "quoted";
 
 		} catch (error) {
 			console.error('Error saving order:', error);
@@ -349,6 +352,36 @@
 				bind:customer_id={selectedCustomerId}
 				placeholder="Enter or search customer..."
 			/>
+		</div>
+
+		<div class="status-section" in:fly={{ y: -10, duration: 600, delay: 200, easing: quintOut }}>
+			<span class="section-label">Order Status</span>
+			<div class="status-selector">
+				<button 
+					class="status-btn status-quoted" 
+					class:active={orderStatus === 'quoted'} 
+					onclick={() => orderStatus = 'quoted'}
+				>
+					<span class="dot"></span>
+					Quoted
+				</button>
+				<button 
+					class="status-btn status-unpaid" 
+					class:active={orderStatus === 'unpaid'} 
+					onclick={() => orderStatus = 'unpaid'}
+				>
+					<span class="dot"></span>
+					Unpaid
+				</button>
+				<button 
+					class="status-btn status-completed" 
+					class:active={orderStatus === 'completed'} 
+					onclick={() => orderStatus = 'completed'}
+				>
+					<span class="dot"></span>
+					Completed
+				</button>
+			</div>
 		</div>
 	</header>
 
@@ -406,7 +439,93 @@
 		gap: 0.5rem;
 	}
 
-	.customer-section label {
+	.status-section {
+		margin-top: 1.25rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		background: #f8fafc;
+		padding: 1rem;
+		border-radius: 12px;
+		border: 1px solid #e2e8f0;
+	}
+
+	.status-section .section-label {
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #64748b;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.status-selector {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.5rem;
+	}
+
+	.status-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.6rem;
+		border-radius: 8px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		cursor: pointer;
+		border: 2px solid transparent;
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		background: #fff;
+		color: #64748b;
+	}
+
+	.dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: currentColor;
+		opacity: 0.5;
+	}
+
+	.status-btn:hover {
+		background: #f1f5f9;
+	}
+
+	/* Quoted - Blue */
+	.status-quoted.active {
+		background: #eff6ff;
+		border-color: #3b82f6;
+		color: #1e40af;
+	}
+	.status-quoted.active .dot {
+		background: #3b82f6;
+		opacity: 1;
+	}
+
+	/* Unpaid - Amber */
+	.status-unpaid.active {
+		background: #fffbeb;
+		border-color: #f59e0b;
+		color: #92400e;
+	}
+	.status-unpaid.active .dot {
+		background: #f59e0b;
+		opacity: 1;
+	}
+
+	/* Completed - Green */
+	.status-completed.active {
+		background: #f0fdf4;
+		border-color: #22c55e;
+		color: #166534;
+	}
+	.status-completed.active .dot {
+		background: #22c55e;
+		opacity: 1;
+	}
+
+	.customer-section label, .status-section .section-label {
 		font-size: 0.85rem;
 		font-weight: 700;
 		color: #475569;
