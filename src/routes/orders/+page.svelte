@@ -5,12 +5,18 @@
 	import OrderTable from './components/OrderTable.svelte';
 	import OrderCard from './components/OrderCard.svelte';
 	import OrderSummary from './components/OrderSummary.svelte';
+	import CustomerSearch from './components/CustomerSearch.svelte';
 	import { formatCurrency } from './utils/format';
 
 	// State for order items
 	let items = $state([
 		{ id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0 }
 	]);
+
+	// State for customer
+	let selectedCustomerName = $state("");
+	let selectedCustomerId = $state(null);
+	let isSaving = $state(false);
 
 	// Derived state for totals
 	let grandTotal = $derived(
@@ -39,41 +45,110 @@
 	}
 
 	async function handleSave() {
-		// Log the order save
-		console.log('Saving Order:', {
-			items,
-			grandTotal,
-			timestamp: new Date().toISOString()
-		});
+		if (!selectedCustomerName) {
+			alert('Please enter or select a customer name.');
+			return;
+		}
 
-		// Check for buy price updates
-		const priceUpdates = items
-			.filter(item => item.product_id && item.buy_price !== item.original_buy_price)
-			.map(item => ({
+		const validItems = items.filter(item => item.product_id && item.quantity > 0);
+		if (validItems.length === 0) {
+			alert('Please add at least one valid product to the order.');
+			return;
+		}
+
+		isSaving = true;
+		try {
+			// 1. Ensure customer exists
+			let customerId = selectedCustomerId;
+			if (!customerId) {
+				// Try to find if a customer with this name already exists
+				const { data: existingCust, error: findError } = await supabase
+					.from('quincees_customers')
+					.select('id')
+					.eq('name', selectedCustomerName)
+					.maybeSingle();
+				
+				if (findError) throw findError;
+
+				if (existingCust) {
+					customerId = existingCust.id;
+				} else {
+					// Create new customer
+					const { data: newCustomer, error: custError } = await supabase
+						.from('quincees_customers')
+						.insert({ name: selectedCustomerName })
+						.select()
+						.single();
+					
+					if (custError) throw custError;
+					customerId = newCustomer.id;
+				}
+				selectedCustomerId = customerId;
+			}
+
+			// 2. Create Order
+			const { data: order, error: orderError } = await supabase
+				.from('quincees_orders')
+				.insert({
+					customer_id: customerId,
+					customer_username: selectedCustomerName, // Keep for backward compatibility
+					total_amount: grandTotal,
+					status: 'completed'
+				})
+				.select()
+				.single();
+
+			if (orderError) throw orderError;
+
+			// 3. Create Order Items
+			const orderItems = validItems.map(item => ({
+				order_id: order.id,
 				product_id: item.product_id,
-				buy_price: item.buy_price,
-				sell_price: item.sell_price,
-				effective_from: new Date().toISOString()
+				quantity: item.quantity,
+				price_at_order: item.sell_price
 			}));
 
-		if (priceUpdates.length > 0) {
-			const { error } = await supabase
-				.from('quincees_prices')
-				.insert(priceUpdates);
-			
-			if (error) {
-				console.error('Error updating prices:', error);
-				alert('Order saved, but there was an error updating price records.');
-			} else {
-				console.log('Prices updated successfully');
-				// Update original prices to current to avoid duplicate records if saved again
-				items.forEach(item => {
-					item.original_buy_price = item.buy_price;
-				});
-				alert('Order saved and prices updated!');
+			const { error: itemsError } = await supabase
+				.from('quincees_order_items')
+				.insert(orderItems);
+
+			if (itemsError) throw itemsError;
+
+			// 4. Update Prices (Existing logic)
+			const priceUpdates = validItems
+				.filter(item => item.buy_price !== item.original_buy_price)
+				.map(item => ({
+					product_id: item.product_id,
+					buy_price: item.buy_price,
+					sell_price: item.sell_price,
+					effective_from: new Date().toISOString()
+				}));
+
+			if (priceUpdates.length > 0) {
+				const { error: priceError } = await supabase
+					.from('quincees_prices')
+					.insert(priceUpdates);
+				
+				if (priceError) {
+					console.error('Error updating prices:', priceError);
+					alert('Order saved, but there was an error updating price records.');
+				}
 			}
-		} else {
-			alert('Order saved! (Logged to console)');
+
+			alert('Order saved successfully!');
+			
+			// Reset form
+			items = [
+				{ id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0 }
+			];
+			selectedCustomerName = "";
+			selectedCustomerId = null;
+
+		} catch (error) {
+			console.error('Error saving order:', error);
+			alert('Failed to save order: ' + error.message);
+		} finally {
+			isSaving = false;
 		}
 	}
 </script>
@@ -93,7 +168,14 @@
 			</a>
 			<h1>Orders</h1>
 		</div>
-		<p class="subtitle">Enter item details below to create a new order.</p>
+		<div class="customer-section">
+			<label for="customer-search">Customer Name</label>
+			<CustomerSearch 
+				bind:value={selectedCustomerName} 
+				bind:customer_id={selectedCustomerId}
+				placeholder="Enter or search customer..."
+			/>
+		</div>
 	</header>
 
 	<main class="main-content">
@@ -116,7 +198,7 @@
 		</button>
 	</main>
 
-	<OrderSummary {items} {grandTotal} {handleSave} />
+	<OrderSummary {items} {grandTotal} {handleSave} disabled={isSaving} />
 </div>
 
 <style>
@@ -132,6 +214,21 @@
 
 	.header {
 		margin-bottom: 0.5rem;
+	}
+
+	.customer-section {
+		margin-top: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.customer-section label {
+		font-size: 0.85rem;
+		font-weight: 700;
+		color: #475569;
+		text-transform: uppercase;
+		letter-spacing: 0.025em;
 	}
 
 	.header-content {
@@ -162,12 +259,6 @@
 		color: #0f172a;
 		margin: 0;
 		letter-spacing: -0.025em;
-	}
-
-	.subtitle {
-		color: #64748b;
-		margin: 0;
-		font-size: 0.95rem;
 	}
 
 	.main-content {

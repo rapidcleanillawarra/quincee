@@ -3,7 +3,7 @@
 	import { quintOut } from 'svelte/easing';
 	import { formatCurrency } from '../utils/format';
 
-	let { items, grandTotal, handleSave } = $props();
+	let { items, grandTotal, handleSave, disabled = false } = $props();
 </script>
 
 <footer class="summary-footer" in:fly={{ y: 20, duration: 800, easing: quintOut }}>
@@ -11,8 +11,8 @@
 		<span class="summary-label">Grand Total</span>
 		<span class="summary-value">{formatCurrency(grandTotal)}</span>
 	</div>
-	<button onclick={handleSave} class="save-btn" disabled={items.length === 0}>
-		Save Order
+	<button onclick={handleSave} class="save-btn" disabled={disabled || items.length === 0}>
+		{disabled ? 'Saving...' : 'Save Order'}
 	</button>
 </footer>
 
