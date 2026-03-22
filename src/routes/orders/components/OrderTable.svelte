@@ -48,7 +48,8 @@
 					<td>
 						<input 
 							type="number" 
-							min="1" 
+							min="0" 
+							step="any"
 							bind:value={item.quantity}
 							class="input-field qty-input"
 						/>
