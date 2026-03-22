@@ -1,4 +1,6 @@
 <script>
+	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { supabase } from '$lib/supabase';
@@ -18,6 +20,8 @@
 	let selectedCustomerId = $state(null);
 	let lastAddedRowId = $state(null);
 	let isSaving = $state(false);
+	let orderId = $state(null);
+	let isLoading = $state(false);
 
 	// Derived state for totals
 	let grandTotal = $derived(
@@ -50,9 +54,75 @@
 			items = items.filter(item => item.id !== id);
 		} else {
 			// Reset the last item instead of deleting it
-			items[0] = { id: crypto.randomUUID(), name: '', quantity: 1, sell_price: 0, buy_price: 0 };
+			items[0] = { id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0 };
 		}
 	}
+
+	async function loadOrder(id) {
+		isLoading = true;
+		try {
+			const { data: order, error: orderError } = await supabase
+				.from('quincees_orders')
+				.select('*')
+				.eq('id', id)
+				.single();
+
+			if (orderError) throw orderError;
+			if (!order) return;
+
+			orderId = order.id;
+			selectedCustomerId = order.customer_id;
+			selectedCustomerName = order.customer_username;
+
+			// Fetch items for this order
+			const { data: orderItems, error: itemsError } = await supabase
+				.from('quincees_order_items')
+				.select(`
+					*,
+					product:quincees_products(name)
+				`)
+				.eq('order_id', id);
+
+			if (itemsError) throw itemsError;
+
+			if (orderItems && orderItems.length > 0) {
+				const mappedItems = await Promise.all(orderItems.map(async (item) => {
+					// Get latest buy price for each product
+					const { data: priceData } = await supabase
+						.from('quincees_prices')
+						.select('buy_price')
+						.eq('product_id', item.product_id)
+						.order('effective_from', { ascending: false })
+						.limit(1)
+						.maybeSingle();
+
+					return {
+						id: crypto.randomUUID(),
+						product_id: item.product_id,
+						name: item.product?.name || '',
+						quantity: item.quantity,
+						sell_price: item.price_at_order,
+						buy_price: priceData?.buy_price || 0,
+						original_buy_price: priceData?.buy_price || 0
+					};
+				}));
+
+				items = mappedItems;
+			}
+		} catch (error) {
+			console.error('Error loading order:', error);
+			alert('Failed to load order: ' + error.message);
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	onMount(() => {
+		const id = page.url.searchParams.get('id');
+		if (id) {
+			loadOrder(id);
+		}
+	});
 
 	async function handleSave() {
 		if (!selectedCustomerName) {
@@ -145,19 +215,46 @@
 				}
 			}
 
-			// 3. Create Order
-			const { data: order, error: orderError } = await supabase
-				.from('quincees_orders')
-				.insert({
-					customer_id: customerId,
-					customer_username: selectedCustomerName, // Keep for backward compatibility
-					total_amount: grandTotal,
-					status: 'completed'
-				})
-				.select()
-				.single();
+			// 3. Create/Update Order
+			let order;
+			if (orderId) {
+				const { data: updatedOrder, error: orderError } = await supabase
+					.from('quincees_orders')
+					.update({
+						customer_id: customerId,
+						customer_username: selectedCustomerName,
+						total_amount: grandTotal,
+						status: 'completed'
+					})
+					.eq('id', orderId)
+					.select()
+					.single();
+				
+				if (orderError) throw orderError;
+				order = updatedOrder;
 
-			if (orderError) throw orderError;
+				// Delete existing items to replace with new ones
+				const { error: deleteError } = await supabase
+					.from('quincees_order_items')
+					.delete()
+					.eq('order_id', orderId);
+				
+				if (deleteError) throw deleteError;
+			} else {
+				const { data: newOrder, error: orderError } = await supabase
+					.from('quincees_orders')
+					.insert({
+						customer_id: customerId,
+						customer_username: selectedCustomerName, 
+						total_amount: grandTotal,
+						status: 'completed'
+					})
+					.select()
+					.single();
+
+				if (orderError) throw orderError;
+				order = newOrder;
+			}
 
 			// 4. Create Order Items
 			const orderItems = validItems.map(item => ({
@@ -219,6 +316,7 @@
 			];
 			selectedCustomerName = "";
 			selectedCustomerId = null;
+			orderId = null;
 
 		} catch (error) {
 			console.error('Error saving order:', error);
@@ -255,26 +353,35 @@
 	</header>
 
 	<main class="main-content">
-		<!-- Desktop Table View -->
-		<OrderTable bind:items {removeItem} {addItem} {lastAddedRowId} customerId={selectedCustomerId} />
+		{#if isLoading}
+			<div class="loading-state">
+				<div class="spinner"></div>
+				<p>Loading order data...</p>
+			</div>
+		{:else}
+			<!-- Desktop Table View -->
+			<OrderTable bind:items {removeItem} {addItem} {lastAddedRowId} customerId={selectedCustomerId} />
 
-		<!-- Mobile Card View -->
-		<div class="mobile-only card-list">
-			{#each items as _, i (items[i].id)}
-				<OrderCard bind:item={items[i]} {removeItem} {addItem} {lastAddedRowId} index={i} isLast={i === items.length - 1} customerId={selectedCustomerId} />
-			{/each}
-		</div>
+			<!-- Mobile Card View -->
+			<div class="mobile-only card-list">
+				{#each items as _, i (items[i].id)}
+					<OrderCard bind:item={items[i]} {removeItem} {addItem} {lastAddedRowId} index={i} isLast={i === items.length - 1} customerId={selectedCustomerId} />
+				{/each}
+			</div>
 
-		<button onclick={addItem} class="add-btn">
-			<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
-				<line x1="12" y1="5" x2="12" y2="19" />
-				<line x1="5" y1="12" x2="19" y2="12" />
-			</svg>
-			Add Item
-		</button>
+			<button onclick={addItem} class="add-btn">
+				<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+					<line x1="12" y1="5" x2="12" y2="19" />
+					<line x1="5" y1="12" x2="19" y2="12" />
+				</svg>
+				Add Item
+			</button>
+		{/if}
 	</main>
 
-	<OrderSummary {items} {grandTotal} {totalCapital} {totalProfit} {handleSave} disabled={isSaving} />
+	{#if !isLoading}
+		<OrderSummary {items} {grandTotal} {totalCapital} {totalProfit} {handleSave} disabled={isSaving} />
+	{/if}
 </div>
 
 <style>
@@ -356,6 +463,33 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+	}
+
+	.loading-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 3rem;
+		background: #fff;
+		border-radius: 12px;
+		border: 1px solid #e2e8f0;
+		color: #64748b;
+		gap: 1rem;
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 3px solid #f3f3f3;
+		border-top: 3px solid #3b82f6;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
 	}
 
 	/* Buttons */
