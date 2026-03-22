@@ -3,7 +3,14 @@
     import { supabase } from '$lib/supabase';
     import { fly, fade } from 'svelte/transition';
 
-    let { value = $bindable(), sell_price = $bindable(), buy_price = $bindable(), placeholder = "Search product..." } = $props();
+    let { 
+        value = $bindable(), 
+        sell_price = $bindable(), 
+        buy_price = $bindable(), 
+        original_buy_price = $bindable(),
+        product_id = $bindable(),
+        placeholder = "Search product..." 
+    } = $props();
 
     let products = $state([]);
     let searchTerm = $state(value || "");
@@ -27,7 +34,7 @@
     onMount(async () => {
         const { data, error } = await supabase
             .from('quincees_products')
-            .select('id, name, quincees_prices(sell_price, buy_price)')
+            .select('id, name, quincees_prices(sell_price, buy_price, created_at)')
             .order('name');
         
         if (error) {
@@ -35,12 +42,19 @@
         }
 
         if (data) {
-            products = data.map(p => ({
-                id: p.id,
-                name: p.name,
-                sell_price: p.quincees_prices?.[0]?.sell_price || 0,
-                buy_price: p.quincees_prices?.[0]?.buy_price || 0
-            }));
+            products = data.map(p => {
+                // Get the latest price record
+                const latestPrice = [...(p.quincees_prices || [])].sort((a, b) => 
+                    new Date(b.created_at) - new Date(a.created_at)
+                )[0];
+
+                return {
+                    id: p.id,
+                    name: p.name,
+                    sell_price: latestPrice?.sell_price || 0,
+                    buy_price: latestPrice?.buy_price || 0
+                };
+            });
         }
     });
 
@@ -49,6 +63,8 @@
         value = product.name;
         sell_price = product.sell_price;
         buy_price = product.buy_price;
+        original_buy_price = product.buy_price;
+        product_id = product.id;
         showDropdown = false;
     }
 

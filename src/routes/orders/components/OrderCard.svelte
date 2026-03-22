@@ -12,6 +12,8 @@
 			bind:value={item.name} 
 			bind:sell_price={item.sell_price}
 			bind:buy_price={item.buy_price}
+			bind:original_buy_price={item.original_buy_price}
+			bind:product_id={item.product_id}
 			placeholder="Item Name"
 		/>
 		<button 
@@ -46,6 +48,8 @@
 					step="0.01"
 					bind:value={item.buy_price}
 					class="input-field"
+					class:price-lower={item.product_id && item.buy_price < item.original_buy_price}
+					class:price-higher={item.product_id && item.buy_price > item.original_buy_price}
 				/>
 			</div>
 		</div>
@@ -177,5 +181,16 @@
 	.delete-btn:hover {
 		color: #ef4444;
 		background: #fef2f2;
+	}
+	.price-lower {
+		color: #16a34a !important;
+		background: #f0fdf4 !important;
+		border-color: #bbf7d0 !important;
+	}
+
+	.price-higher {
+		color: #dc2626 !important;
+		background: #fef2f2 !important;
+		border-color: #fecaca !important;
 	}
 </style>

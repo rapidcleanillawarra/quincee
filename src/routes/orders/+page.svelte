@@ -1,6 +1,7 @@
 <script>
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+	import { supabase } from '$lib/supabase';
 	import OrderTable from './components/OrderTable.svelte';
 	import OrderCard from './components/OrderCard.svelte';
 	import OrderSummary from './components/OrderSummary.svelte';
@@ -8,7 +9,7 @@
 
 	// State for order items
 	let items = $state([
-		{ id: crypto.randomUUID(), name: '', quantity: 1, sell_price: 0, buy_price: 0 }
+		{ id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0 }
 	]);
 
 	// Derived state for totals
@@ -19,10 +20,12 @@
 	function addItem() {
 		items.push({
 			id: crypto.randomUUID(),
+			product_id: null,
 			name: '',
 			quantity: 1,
 			sell_price: 0,
-			buy_price: 0
+			buy_price: 0,
+			original_buy_price: 0
 		});
 	}
 
@@ -35,13 +38,43 @@
 		}
 	}
 
-	function handleSave() {
+	async function handleSave() {
+		// Log the order save
 		console.log('Saving Order:', {
 			items,
 			grandTotal,
 			timestamp: new Date().toISOString()
 		});
-		alert('Order saved! (Logged to console)');
+
+		// Check for buy price updates
+		const priceUpdates = items
+			.filter(item => item.product_id && item.buy_price !== item.original_buy_price)
+			.map(item => ({
+				product_id: item.product_id,
+				buy_price: item.buy_price,
+				sell_price: item.sell_price,
+				effective_from: new Date().toISOString()
+			}));
+
+		if (priceUpdates.length > 0) {
+			const { error } = await supabase
+				.from('quincees_prices')
+				.insert(priceUpdates);
+			
+			if (error) {
+				console.error('Error updating prices:', error);
+				alert('Order saved, but there was an error updating price records.');
+			} else {
+				console.log('Prices updated successfully');
+				// Update original prices to current to avoid duplicate records if saved again
+				items.forEach(item => {
+					item.original_buy_price = item.buy_price;
+				});
+				alert('Order saved and prices updated!');
+			}
+		} else {
+			alert('Order saved! (Logged to console)');
+		}
 	}
 </script>
 
