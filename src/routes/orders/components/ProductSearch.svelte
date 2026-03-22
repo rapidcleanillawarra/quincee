@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, untrack } from 'svelte';
     import { supabase } from '$lib/supabase';
     import { fly, fade } from 'svelte/transition';
 
@@ -8,6 +8,16 @@
     let products = $state([]);
     let searchTerm = $state(value || "");
     let showDropdown = $state(false);
+    
+    // Keep searchTerm in sync with value prop if it changes from outside
+    $effect(() => {
+        if (value !== searchTerm) {
+            untrack(() => {
+                searchTerm = value || "";
+            });
+        }
+    });
+
     let filteredProducts = $derived(
         products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -20,6 +30,10 @@
             .select('id, name, quincees_prices(price)')
             .order('name');
         
+        if (error) {
+            console.error('Error fetching products:', error);
+        }
+
         if (data) {
             products = data.map(p => ({
                 id: p.id,
