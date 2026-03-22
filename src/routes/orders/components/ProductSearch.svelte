@@ -10,7 +10,8 @@
         original_buy_price = $bindable(),
         product_id = $bindable(),
         customerId = null,
-        placeholder = "Search product..." 
+        placeholder = "Search product...",
+        autofocus = false
     } = $props();
 
     let products = $state([]);
@@ -110,6 +111,16 @@
             showDropdown = false;
         }, 200);
     }
+
+    onMount(() => {
+        if (autofocus && inputElement) {
+            // Use a tiny timeout to ensure the element is ready in the DOM
+            setTimeout(() => {
+                inputElement.focus();
+                inputElement.select(); // Select all text for easy replacement
+            }, 10);
+        }
+    });
 </script>
 
 <div class="product-search-container">

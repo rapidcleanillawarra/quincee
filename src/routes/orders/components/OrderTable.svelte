@@ -3,7 +3,15 @@
 	import { formatCurrency } from '../utils/format';
 	import ProductSearch from './ProductSearch.svelte';
 
-	let { items = $bindable(), removeItem, customerId } = $props();
+	let { items = $bindable(), removeItem, addItem, lastAddedRowId, customerId } = $props();
+
+	function handleKeyDown(e, index) {
+		if (e.key === 'Enter') {
+			if (index === items.length - 1) {
+				addItem();
+			}
+		}
+	}
 </script>
 
 <div class="table-container desktop-only">
@@ -20,7 +28,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each items as item (item.id)}
+			{#each items as item, index (item.id)}
 				<tr transition:slide={{ duration: 300 }}>
 					<td class="product-cell">
 						<ProductSearch 
@@ -31,6 +39,7 @@
 							bind:product_id={item.product_id}
 							{customerId}
 							placeholder="e.g. Talong"
+							autofocus={item.id === lastAddedRowId}
 						/>
 						{#if !item.product_id && item.name}
 							<span class="new-badge">NEW</span>
@@ -52,6 +61,7 @@
 									min="0" 
 									step="0.01"
 									bind:value={item.buy_price}
+									onkeydown={(e) => handleKeyDown(e, index)}
 									class="input-field price-input"
 									class:price-lower={item.product_id && item.buy_price < item.original_buy_price}
 									class:price-higher={item.product_id && item.buy_price > item.original_buy_price}
@@ -67,6 +77,7 @@
 								min="0" 
 								step="0.01"
 								bind:value={item.sell_price}
+								onkeydown={(e) => handleKeyDown(e, index)}
 								class="input-field price-input"
 							/>
 						</div>

@@ -3,7 +3,13 @@
 	import { formatCurrency } from '../utils/format';
 	import ProductSearch from './ProductSearch.svelte';
 
-	let { item = $bindable(), removeItem, customerId } = $props();
+	let { item = $bindable(), removeItem, addItem, lastAddedRowId, index, isLast, customerId } = $props();
+
+	function handleKeyDown(e) {
+		if (e.key === 'Enter' && isLast) {
+			addItem();
+		}
+	}
 </script>
 
 <div class="order-card" transition:fly={{ x: -20, duration: 300 }}>
@@ -17,6 +23,7 @@
 				bind:product_id={item.product_id}
 				{customerId}
 				placeholder="Item Name"
+				autofocus={item.id === lastAddedRowId}
 			/>
 			{#if !item.product_id && item.name}
 				<span class="new-badge">NEW</span>
@@ -53,6 +60,7 @@
 					min="0" 
 					step="0.01"
 					bind:value={item.buy_price}
+					onkeydown={handleKeyDown}
 					class="input-field"
 					class:price-lower={item.product_id && item.buy_price < item.original_buy_price}
 					class:price-higher={item.product_id && item.buy_price > item.original_buy_price}
@@ -70,6 +78,7 @@
 					min="0" 
 					step="0.01"
 					bind:value={item.sell_price}
+					onkeydown={handleKeyDown}
 					class="input-field"
 				/>
 			</div>

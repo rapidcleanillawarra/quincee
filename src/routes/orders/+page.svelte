@@ -16,6 +16,7 @@
 	// State for customer
 	let selectedCustomerName = $state("");
 	let selectedCustomerId = $state(null);
+	let lastAddedRowId = $state(null);
 	let isSaving = $state(false);
 
 	// Derived state for totals
@@ -30,7 +31,7 @@
 	let totalProfit = $derived(grandTotal - totalCapital);
 
 	function addItem() {
-		items.push({
+		const newItem = {
 			id: crypto.randomUUID(),
 			product_id: null,
 			name: '',
@@ -38,7 +39,10 @@
 			sell_price: 0,
 			buy_price: 0,
 			original_buy_price: 0
-		});
+		};
+		items.push(newItem);
+		lastAddedRowId = newItem.id;
+		return newItem;
 	}
 
 	function removeItem(id) {
@@ -252,12 +256,12 @@
 
 	<main class="main-content">
 		<!-- Desktop Table View -->
-		<OrderTable bind:items {removeItem} customerId={selectedCustomerId} />
+		<OrderTable bind:items {removeItem} {addItem} {lastAddedRowId} customerId={selectedCustomerId} />
 
 		<!-- Mobile Card View -->
 		<div class="mobile-only card-list">
 			{#each items as _, i (items[i].id)}
-				<OrderCard bind:item={items[i]} {removeItem} customerId={selectedCustomerId} />
+				<OrderCard bind:item={items[i]} {removeItem} {addItem} {lastAddedRowId} index={i} isLast={i === items.length - 1} customerId={selectedCustomerId} />
 			{/each}
 		</div>
 
