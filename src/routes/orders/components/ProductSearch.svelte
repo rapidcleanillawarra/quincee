@@ -70,12 +70,13 @@
                 )[0];
 
                 const custPrice = customerPrices.find(cp => cp.product_id === p.id);
+                const buyPrice = latestBuyPrice?.buy_price || 0;
 
                 return {
                     id: p.id,
                     name: p.name,
-                    sell_price: custPrice?.sell_price || 0,
-                    buy_price: latestBuyPrice?.buy_price || 0
+                    sell_price: custPrice?.sell_price || (buyPrice > 0 ? buyPrice + 15 : 0),
+                    buy_price: buyPrice
                 };
             });
         }

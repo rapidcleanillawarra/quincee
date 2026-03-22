@@ -186,7 +186,7 @@
 			<h1>Orders</h1>
 		</div>
 		<div class="customer-section">
-			<label for="customer-search">Customer Name</label>
+			<label for="customer-search">Customer Name <span class="required">*</span></label>
 			<CustomerSearch 
 				bind:value={selectedCustomerName} 
 				bind:customer_id={selectedCustomerId}
@@ -246,6 +246,13 @@
 		color: #475569;
 		text-transform: uppercase;
 		letter-spacing: 0.025em;
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+	}
+
+	.required {
+		color: #ef4444;
 	}
 
 	.header-content {
