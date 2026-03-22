@@ -6,22 +6,54 @@
 
 	let orders = $state([]);
 	let isLoading = $state(true);
+	let overallProfit = $derived(orders.reduce((sum, order) => sum + (order.profit || 0), 0));
 
 	import { formatCurrency, formatDate } from './utils/format';
 
 	async function fetchOrders() {
 		isLoading = true;
 		try {
-			const { data, error } = await supabase
+			const { data: ordersWithCustomers, error } = await supabase
 				.from('quincees_orders')
 				.select(`
 					*,
-					customer:quincees_customers(name)
+					customer:quincees_customers(name),
+					items:quincees_order_items(
+						product_id,
+						quantity,
+						price_at_order
+					)
 				`)
 				.order('created_at', { ascending: false });
 
 			if (error) throw error;
-			orders = data || [];
+
+			// Get all unique product IDs from all orders
+			const productIds = [...new Set(ordersWithCustomers.flatMap(order => order.items.map(item => item.product_id)))];
+			
+			// Fetch current buy prices for these products
+			const { data: pricesData } = await supabase
+				.from('quincees_prices')
+				.select('product_id, buy_price')
+				.in('product_id', productIds)
+				.order('effective_from', { ascending: false });
+			
+			// Map product_id to its latest buy_price
+			const priceMap = {};
+			pricesData?.forEach(p => {
+				if (!priceMap[p.product_id]) {
+					priceMap[p.product_id] = p.buy_price;
+				}
+			});
+
+			// Calculate profit for each order
+			orders = (ordersWithCustomers || []).map(order => {
+				const profit = order.items.reduce((sum, item) => {
+					const buyPrice = priceMap[item.product_id] || 0;
+					return sum + ((item.price_at_order - buyPrice) * item.quantity);
+				}, 0);
+				return { ...order, profit };
+			});
 		} catch (error) {
 			console.error('Error fetching orders:', error);
 		} finally {
@@ -72,7 +104,15 @@
 <div class="container">
 	<header class="header" in:fly={{ y: -20, duration: 800, easing: quintOut }}>
 		<div class="header-left">
-			<h1>Order History</h1>
+			<div class="title-row">
+				<h1>Order History</h1>
+				{#if !isLoading && orders.length > 0}
+					<div class="total-profit-badge" class:positive={overallProfit > 0} class:negative={overallProfit < 0} in:fly={{ x: 20, duration: 600, delay: 400, easing: quintOut }}>
+						<span class="label">Total Profit:</span>
+						<span class="value">{formatCurrency(overallProfit)}</span>
+					</div>
+				{/if}
+			</div>
 			<p class="subtitle">Manage and track your recent orders</p>
 		</div>
 		<a href="/orders/modify" class="new-order-btn">
@@ -106,6 +146,7 @@
 							<th>Date</th>
 							<th>Customer</th>
 							<th>Total Amount</th>
+							<th>Profit</th>
 							<th>Status</th>
 							<th class="text-right">Actions</th>
 						</tr>
@@ -113,22 +154,25 @@
 					<tbody>
 						{#each orders as order (order.id)}
 							<tr>
-								<td class="order-id">
+								<td class="order-id" data-label="Order ID">
 									<span class="id-badge">#{order.id.slice(0, 8)}</span>
 								</td>
-								<td class="date-cell">{formatDate(order.created_at)}</td>
-								<td class="customer-cell">
+								<td class="date-cell" data-label="Date">{formatDate(order.created_at)}</td>
+								<td class="customer-cell" data-label="Customer">
 									<div class="customer-info">
 										<span class="customer-name">{order.customer?.name || order.customer_username || 'Unknown'}</span>
 									</div>
 								</td>
-								<td class="amount-cell">{formatCurrency(order.total_amount)}</td>
-								<td>
+								<td class="amount-cell" data-label="Total Amount">{formatCurrency(order.total_amount)}</td>
+								<td class="profit-cell" class:positive={order.profit > 0} class:negative={order.profit < 0} data-label="Profit">
+									{formatCurrency(order.profit)}
+								</td>
+								<td data-label="Status">
 									<span class="status-pill {getStatusClass(order.status)}">
 										{order.status || 'Pending'}
 									</span>
 								</td>
-								<td class="text-right actions-cell">
+								<td class="text-right actions-cell" data-label="Actions">
 									<a href="/orders/modify?id={order.id}" class="edit-link">
 										<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
 											<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -179,6 +223,46 @@
 		color: #0f172a;
 		margin: 0;
 		letter-spacing: -0.025em;
+	}
+
+	.title-row {
+		display: flex;
+		align-items: center;
+		gap: 1.25rem;
+		flex-wrap: wrap;
+	}
+
+	.total-profit-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 12px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+	}
+
+	.total-profit-badge .label {
+		color: #64748b;
+		font-size: 0.8rem;
+		text-transform: uppercase;
+		letter-spacing: 0.025em;
+	}
+
+	.total-profit-badge.positive .value {
+		color: #16a34a;
+	}
+
+	.total-profit-badge.negative .value {
+		color: #dc2626;
+	}
+
+	.total-profit-badge .value {
+		font-size: 1.1rem;
+		font-weight: 700;
 	}
 
 	.subtitle {
@@ -273,6 +357,18 @@
 	.amount-cell {
 		font-weight: 700;
 		color: #0f172a;
+	}
+
+	.profit-cell {
+		font-weight: 600;
+	}
+
+	.profit-cell.positive {
+		color: #16a34a;
+	}
+
+	.profit-cell.negative {
+		color: #dc2626;
 	}
 
 	.status-pill {
