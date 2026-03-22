@@ -10,7 +10,8 @@
 	<div class="card-header">
 		<ProductSearch 
 			bind:value={item.name} 
-			bind:price={item.price}
+			bind:sell_price={item.sell_price}
+			bind:buy_price={item.buy_price}
 			placeholder="Item Name"
 		/>
 		<button 
@@ -35,7 +36,21 @@
 			/>
 		</div>
 		<div class="input-group">
-			<label for="price-{item.id}">Price</label>
+			<label for="buy-price-{item.id}">Buy Price</label>
+			<div class="price-input-wrapper">
+				<span class="currency-symbol">₱</span>
+				<input 
+					id="buy-price-{item.id}"
+					type="number" 
+					min="0" 
+					step="0.01"
+					bind:value={item.buy_price}
+					class="input-field"
+				/>
+			</div>
+		</div>
+		<div class="input-group">
+			<label for="price-{item.id}">Sell Price</label>
 			<div class="price-input-wrapper">
 				<span class="currency-symbol">₱</span>
 				<input 
@@ -43,7 +58,7 @@
 					type="number" 
 					min="0" 
 					step="0.01"
-					bind:value={item.price}
+					bind:value={item.sell_price}
 					class="input-field"
 				/>
 			</div>
@@ -51,7 +66,7 @@
 	</div>
 	<div class="card-footer">
 		<span>Subtotal:</span>
-		<span class="item-total">{formatCurrency(item.quantity * item.price)}</span>
+		<span class="item-total">{formatCurrency(item.quantity * item.sell_price)}</span>
 	</div>
 </div>
 
@@ -95,7 +110,7 @@
 
 	.card-body {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 		gap: 0.75rem;
 	}
 

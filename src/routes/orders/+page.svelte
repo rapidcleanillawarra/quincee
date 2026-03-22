@@ -8,12 +8,12 @@
 
 	// State for order items
 	let items = $state([
-		{ id: crypto.randomUUID(), name: '', quantity: 1, price: 0 }
+		{ id: crypto.randomUUID(), name: '', quantity: 1, sell_price: 0, buy_price: 0 }
 	]);
 
 	// Derived state for totals
 	let grandTotal = $derived(
-		items.reduce((sum, item) => sum + (item.quantity * item.price), 0)
+		items.reduce((sum, item) => sum + (item.quantity * item.sell_price), 0)
 	);
 
 	function addItem() {
@@ -21,7 +21,8 @@
 			id: crypto.randomUUID(),
 			name: '',
 			quantity: 1,
-			price: 0
+			sell_price: 0,
+			buy_price: 0
 		});
 	}
 
@@ -30,7 +31,7 @@
 			items = items.filter(item => item.id !== id);
 		} else {
 			// Reset the last item instead of deleting it
-			items[0] = { id: crypto.randomUUID(), name: '', quantity: 1, price: 0 };
+			items[0] = { id: crypto.randomUUID(), name: '', quantity: 1, sell_price: 0, buy_price: 0 };
 		}
 	}
 

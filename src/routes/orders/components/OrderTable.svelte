@@ -12,7 +12,8 @@
 			<tr>
 				<th>Item Name</th>
 				<th>Quantity</th>
-				<th>Price</th>
+				<th>Buy Price</th>
+				<th>Sell Price</th>
 				<th>Total</th>
 				<th class="actions-header"></th>
 			</tr>
@@ -23,7 +24,8 @@
 					<td>
 						<ProductSearch 
 							bind:value={item.name} 
-							bind:price={item.price}
+							bind:sell_price={item.sell_price}
+							bind:buy_price={item.buy_price}
 							placeholder="e.g. Talong"
 						/>
 					</td>
@@ -42,13 +44,25 @@
 								type="number" 
 								min="0" 
 								step="0.01"
-								bind:value={item.price}
+								bind:value={item.buy_price}
+								class="input-field price-input"
+							/>
+						</div>
+					</td>
+					<td>
+						<div class="price-input-wrapper">
+							<span class="currency-symbol">₱</span>
+							<input 
+								type="number" 
+								min="0" 
+								step="0.01"
+								bind:value={item.sell_price}
 								class="input-field price-input"
 							/>
 						</div>
 					</td>
 					<td class="row-total">
-						{formatCurrency(item.quantity * item.price)}
+						{formatCurrency(item.quantity * item.sell_price)}
 					</td>
 					<td class="actions-cell">
 						<button 

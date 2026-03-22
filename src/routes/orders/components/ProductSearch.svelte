@@ -3,7 +3,7 @@
     import { supabase } from '$lib/supabase';
     import { fly, fade } from 'svelte/transition';
 
-    let { value = $bindable(), price = $bindable(), placeholder = "Search product..." } = $props();
+    let { value = $bindable(), sell_price = $bindable(), buy_price = $bindable(), placeholder = "Search product..." } = $props();
 
     let products = $state([]);
     let searchTerm = $state(value || "");
@@ -27,7 +27,7 @@
     onMount(async () => {
         const { data, error } = await supabase
             .from('quincees_products')
-            .select('id, name, quincees_prices(price)')
+            .select('id, name, quincees_prices(sell_price, buy_price)')
             .order('name');
         
         if (error) {
@@ -38,7 +38,8 @@
             products = data.map(p => ({
                 id: p.id,
                 name: p.name,
-                price: p.quincees_prices?.[0]?.price || 0
+                sell_price: p.quincees_prices?.[0]?.sell_price || 0,
+                buy_price: p.quincees_prices?.[0]?.buy_price || 0
             }));
         }
     });
@@ -46,7 +47,8 @@
     function selectProduct(product) {
         searchTerm = product.name;
         value = product.name;
-        price = product.price;
+        sell_price = product.sell_price;
+        buy_price = product.buy_price;
         showDropdown = false;
     }
 
@@ -87,7 +89,7 @@
                             onmousedown={(e) => e.preventDefault()}
                         >
                             <span class="product-name">{product.name}</span>
-                            <span class="product-price">₱{product.price}</span>
+                            <span class="product-price">₱{product.sell_price}</span>
                         </button>
                     </li>
                 {/each}
