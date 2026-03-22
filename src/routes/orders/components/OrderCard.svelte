@@ -3,7 +3,7 @@
 	import { formatCurrency } from '../utils/format';
 	import ProductSearch from './ProductSearch.svelte';
 
-	let { item = $bindable(), removeItem } = $props();
+	let { item = $bindable(), removeItem, customerId } = $props();
 </script>
 
 <div class="order-card" transition:fly={{ x: -20, duration: 300 }}>
@@ -14,6 +14,7 @@
 			bind:buy_price={item.buy_price}
 			bind:original_buy_price={item.original_buy_price}
 			bind:product_id={item.product_id}
+			{customerId}
 			placeholder="Item Name"
 		/>
 		<button 

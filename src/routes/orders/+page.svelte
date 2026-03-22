@@ -115,23 +115,40 @@
 			if (itemsError) throw itemsError;
 
 			// 4. Update Prices (Existing logic)
-			const priceUpdates = validItems
+			const buyPriceUpdates = validItems
 				.filter(item => item.buy_price !== item.original_buy_price)
 				.map(item => ({
 					product_id: item.product_id,
 					buy_price: item.buy_price,
-					sell_price: item.sell_price,
 					effective_from: new Date().toISOString()
 				}));
 
-			if (priceUpdates.length > 0) {
+			if (buyPriceUpdates.length > 0) {
 				const { error: priceError } = await supabase
 					.from('quincees_prices')
-					.insert(priceUpdates);
+					.insert(buyPriceUpdates);
 				
 				if (priceError) {
-					console.error('Error updating prices:', priceError);
-					alert('Order saved, but there was an error updating price records.');
+					console.error('Error updating buy prices:', priceError);
+				}
+			}
+
+			// 5. Update Customer-Specific Sell Prices
+			const sellPriceUpdates = validItems.map(item => ({
+				customer_id: customerId,
+				product_id: item.product_id,
+				sell_price: item.sell_price,
+				updated_at: new Date().toISOString()
+			}));
+
+			if (sellPriceUpdates.length > 0) {
+				const { error: sellPriceError } = await supabase
+					.from('quincees_customer_prices')
+					.upsert(sellPriceUpdates, { onConflict: 'customer_id, product_id' });
+				
+				if (sellPriceError) {
+					console.error('Error updating customer sell prices:', sellPriceError);
+					alert('Order saved, but there was an error updating customer price records.');
 				}
 			}
 
@@ -180,12 +197,12 @@
 
 	<main class="main-content">
 		<!-- Desktop Table View -->
-		<OrderTable bind:items {removeItem} />
+		<OrderTable bind:items {removeItem} customerId={selectedCustomerId} />
 
 		<!-- Mobile Card View -->
 		<div class="mobile-only card-list">
 			{#each items as _, i (items[i].id)}
-				<OrderCard bind:item={items[i]} {removeItem} />
+				<OrderCard bind:item={items[i]} {removeItem} customerId={selectedCustomerId} />
 			{/each}
 		</div>
 

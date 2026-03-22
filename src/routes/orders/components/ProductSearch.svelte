@@ -9,6 +9,7 @@
         buy_price = $bindable(), 
         original_buy_price = $bindable(),
         product_id = $bindable(),
+        customerId = null,
         placeholder = "Search product..." 
     } = $props();
 
@@ -31,31 +32,58 @@
 
     let inputElement;
 
-    onMount(async () => {
-        const { data, error } = await supabase
+    async function fetchProducts() {
+        // Fetch products with their latest buy price
+        const { data: productsData, error: productsError } = await supabase
             .from('quincees_products')
-            .select('id, name, quincees_prices(sell_price, buy_price, created_at)')
+            .select(`
+                id, 
+                name, 
+                quincees_prices(buy_price, created_at)
+            `)
             .order('name');
         
-        if (error) {
-            console.error('Error fetching products:', error);
+        if (productsError) {
+            console.error('Error fetching products:', productsError);
+            return;
         }
 
-        if (data) {
-            products = data.map(p => {
-                // Get the latest price record
-                const latestPrice = [...(p.quincees_prices || [])].sort((a, b) => 
+        let customerPrices = [];
+        if (customerId) {
+            const { data: pricesData, error: pricesError } = await supabase
+                .from('quincees_customer_prices')
+                .select('product_id, sell_price')
+                .eq('customer_id', customerId);
+            
+            if (pricesError) {
+                console.error('Error fetching customer prices:', pricesError);
+            } else {
+                customerPrices = pricesData;
+            }
+        }
+
+        if (productsData) {
+            products = productsData.map(p => {
+                // Get the latest buy price record
+                const latestBuyPrice = [...(p.quincees_prices || [])].sort((a, b) => 
                     new Date(b.created_at) - new Date(a.created_at)
                 )[0];
+
+                const custPrice = customerPrices.find(cp => cp.product_id === p.id);
 
                 return {
                     id: p.id,
                     name: p.name,
-                    sell_price: latestPrice?.sell_price || 0,
-                    buy_price: latestPrice?.buy_price || 0
+                    sell_price: custPrice?.sell_price || 0,
+                    buy_price: latestBuyPrice?.buy_price || 0
                 };
             });
         }
+    }
+
+    $effect(() => {
+        // Fetch products when component mounts OR when customerId changes
+        fetchProducts();
     });
 
     function selectProduct(product) {

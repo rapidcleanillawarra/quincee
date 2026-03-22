@@ -3,7 +3,7 @@
 	import { formatCurrency } from '../utils/format';
 	import ProductSearch from './ProductSearch.svelte';
 
-	let { items = $bindable(), removeItem } = $props();
+	let { items = $bindable(), removeItem, customerId } = $props();
 </script>
 
 <div class="table-container desktop-only">
@@ -28,6 +28,7 @@
 							bind:buy_price={item.buy_price}
 							bind:original_buy_price={item.original_buy_price}
 							bind:product_id={item.product_id}
+							{customerId}
 							placeholder="e.g. Talong"
 						/>
 					</td>
