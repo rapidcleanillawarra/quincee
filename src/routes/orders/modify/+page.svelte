@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { supabase } from '$lib/supabase';
@@ -312,14 +313,14 @@
 
 			alert('Order saved successfully!');
 			
-			// Reset form
-			items = [
-				{ id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0 }
-			];
-			selectedCustomerName = "";
-			selectedCustomerId = null;
-			orderId = null;
-			orderStatus = "quoted";
+			// If it was a new order, update the URL and state
+			if (!orderId) {
+				orderId = order.id;
+				goto(`/orders/modify?id=${order.id}`, { replaceState: true });
+			} else {
+				// For existing orders, just reload to ensure everything is in sync
+				loadOrder(orderId);
+			}
 
 		} catch (error) {
 			console.error('Error saving order:', error);
@@ -362,7 +363,7 @@
 <div class="container">
 	<header class="header" in:fly={{ y: -20, duration: 800, easing: quintOut }}>
 		<div class="header-content">
-			<a href="/prices" class="back-link">
+			<a href="/orders" class="back-link">
 				<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
 					<path d="M19 12H5M12 19l-7-7 7-7" />
 				</svg>
