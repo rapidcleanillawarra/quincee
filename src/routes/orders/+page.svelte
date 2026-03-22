@@ -23,6 +23,12 @@
 		items.reduce((sum, item) => sum + (item.quantity * item.sell_price), 0)
 	);
 
+	let totalCapital = $derived(
+		items.reduce((sum, item) => sum + (item.quantity * (item.buy_price || 0)), 0)
+	);
+
+	let totalProfit = $derived(grandTotal - totalCapital);
+
 	function addItem() {
 		items.push({
 			id: crypto.randomUUID(),
@@ -264,7 +270,7 @@
 		</button>
 	</main>
 
-	<OrderSummary {items} {grandTotal} {handleSave} disabled={isSaving} />
+	<OrderSummary {items} {grandTotal} {totalCapital} {totalProfit} {handleSave} disabled={isSaving} />
 </div>
 
 <style>

@@ -14,6 +14,7 @@
 				<th>Quantity</th>
 				<th>Buy Price</th>
 				<th>Sell Price</th>
+				<th>Capital</th>
 				<th>Total</th>
 				<th class="actions-header"></th>
 			</tr>
@@ -69,6 +70,9 @@
 								class="input-field price-input"
 							/>
 						</div>
+					</td>
+					<td class="row-capital">
+						{formatCurrency(item.quantity * item.buy_price)}
 					</td>
 					<td class="row-total">
 						{formatCurrency(item.quantity * item.sell_price)}
@@ -170,6 +174,13 @@
 	.price-input {
 		padding-left: 1.75rem;
 		width: 120px;
+	}
+
+	.row-capital {
+		font-weight: 500;
+		color: #64748b;
+		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.row-total {

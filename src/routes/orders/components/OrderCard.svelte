@@ -74,6 +74,12 @@
 				/>
 			</div>
 		</div>
+		<div class="input-group">
+			<label for="capital-{item.id}">Capital</label>
+			<div class="price-display">
+				{formatCurrency(item.quantity * item.buy_price)}
+			</div>
+		</div>
 	</div>
 	<div class="card-footer">
 		<span>Subtotal:</span>
@@ -188,6 +194,13 @@
 	.delete-btn:hover {
 		color: #ef4444;
 		background: #fef2f2;
+	}
+
+	.price-display {
+		padding: 0.6rem 0.75rem;
+		font-size: 0.95rem;
+		color: #64748b;
+		font-weight: 600;
 	}
 	.price-lower {
 		color: #16a34a !important;
