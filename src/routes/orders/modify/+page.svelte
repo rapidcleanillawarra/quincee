@@ -328,6 +328,31 @@
 			isSaving = false;
 		}
 	}
+
+	async function handleDelete() {
+		if (!orderId) return;
+		if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+			return;
+		}
+
+		isSaving = true;
+		try {
+			const { error } = await supabase
+				.from('quincees_orders')
+				.delete()
+				.eq('id', orderId);
+
+			if (error) throw error;
+
+			alert('Order deleted successfully');
+			window.location.href = '/orders';
+		} catch (error) {
+			console.error('Error deleting order:', error);
+			alert('Failed to delete order: ' + error.message);
+		} finally {
+			isSaving = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -345,6 +370,23 @@
 			</a>
 			<h1>Orders</h1>
 		</div>
+
+		{#if orderId}
+			<div class="actions-section" in:fly={{ x: 20, duration: 600, delay: 100, easing: quintOut }}>
+				<button 
+					class="delete-order-btn" 
+					onclick={handleDelete}
+					disabled={isSaving}
+				>
+					<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+						<polyline points="3 6 5 6 21 6"></polyline>
+						<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+					</svg>
+					Delete Order
+				</button>
+			</div>
+		{/if}
+
 		<div class="customer-section">
 			<label for="customer-search">Customer Name <span class="required">*</span></label>
 			<CustomerSearch 
@@ -544,7 +586,39 @@
 		display: flex;
 		align-items: center;
 		gap: 1rem;
+	}
+
+	.actions-section {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: -1rem;
 		margin-bottom: 0.5rem;
+	}
+
+	.delete-order-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		background: #fee2e2;
+		color: #991b1b;
+		border: 1px solid #fecaca;
+		border-radius: 8px;
+		font-size: 0.85rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.delete-order-btn:hover:not(:disabled) {
+		background: #fecaca;
+		color: #7f1d1d;
+		border-color: #fca5a5;
+	}
+
+	.delete-order-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.back-link {
