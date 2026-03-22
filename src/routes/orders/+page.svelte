@@ -86,15 +86,6 @@
 </div>
 
 <style>
-	:global(body) {
-		margin: 0;
-		padding: 0;
-		font-family: 'Inter', -apple-system, system-ui, sans-serif;
-		background: #f0f4f8;
-		color: #1a202c;
-		-webkit-font-smoothing: antialiased;
-	}
-
 	.container {
 		max-width: 900px;
 		margin: 0 auto;

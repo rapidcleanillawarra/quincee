@@ -1,0 +1,27 @@
+:root {
+	--font-main: 'Inter', -apple-system, system-ui, sans-serif;
+	--bg-app: #f8fafc;
+	--text-main: #0f172a;
+	--text-muted: #64748b;
+	--primary: #3b82f6;
+	--border-light: #e2e8f0;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	font-family: var(--font-main);
+	background: var(--bg-app);
+	color: var(--text-main);
+	-webkit-font-smoothing: antialiased;
+}
+
+main {
+	min-height: calc(100vh - 64px); /* Subtract header height */
+}
+
+@media print {
+	body {
+		background: #fff;
+	}
+}

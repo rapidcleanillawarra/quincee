@@ -119,17 +119,6 @@
 </div>
 
 <style>
-	:global(body) {
-		font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-		padding: 1rem;
-		max-width: 210mm;
-		margin: 0 auto;
-		background: #f8f8f8;
-		color: #222;
-		line-height: 1.4;
-		font-size: 15px;
-	}
-
 	.page {
 		max-width: 210mm;
 	}

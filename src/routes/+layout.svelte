@@ -1,9 +1,11 @@
 <script>
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
+	import '../app.css';
 
 	let { children } = $props();
 </script>
+
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
@@ -27,11 +29,6 @@
 </main>
 
 <style>
-	:global(html), :global(body) {
-		margin: 0;
-		padding: 0;
-		font-family: 'Inter', -apple-system, sans-serif;
-	}
 
 	.nav-header {
 		background: rgba(255, 255, 255, 0.8);
