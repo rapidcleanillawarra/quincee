@@ -50,9 +50,16 @@
 			return;
 		}
 
-		const validItems = items.filter(item => item.product_id && item.quantity > 0);
+		const validItems = items.filter(item => (item.product_id || item.name) && item.quantity > 0);
 		if (validItems.length === 0) {
 			alert('Please add at least one valid product to the order.');
+			return;
+		}
+
+		// Check if any new products are missing a buy price
+		const missingBuyPrice = validItems.find(item => !item.product_id && item.name && (!item.buy_price || item.buy_price <= 0));
+		if (missingBuyPrice) {
+			alert(`Please enter a buy price for new product: ${missingBuyPrice.name}`);
 			return;
 		}
 
@@ -86,7 +93,49 @@
 				selectedCustomerId = customerId;
 			}
 
-			// 2. Create Order
+			// 2. Ensure all products exist
+			for (let i = 0; i < validItems.length; i++) {
+				if (!validItems[i].product_id) {
+					// Check if a product with this name already exists (just in case)
+					const { data: existingProd, error: prodFindError } = await supabase
+						.from('quincees_products')
+						.select('id')
+						.eq('name', validItems[i].name)
+						.maybeSingle();
+					
+					if (prodFindError) throw prodFindError;
+
+					if (existingProd) {
+						validItems[i].product_id = existingProd.id;
+					} else {
+						// Create new product
+						const { data: newProd, error: prodError } = await supabase
+							.from('quincees_products')
+							.insert({ name: validItems[i].name })
+							.select()
+							.single();
+						
+						if (prodError) throw prodError;
+						validItems[i].product_id = newProd.id;
+
+						// Also create initial price record
+						const { error: priceError } = await supabase
+							.from('quincees_prices')
+							.insert({
+								product_id: newProd.id,
+								buy_price: validItems[i].buy_price,
+								effective_from: new Date().toISOString()
+							});
+						
+						if (priceError) throw priceError;
+						
+						// Set original_buy_price to avoid redundant update in Step 4
+						validItems[i].original_buy_price = validItems[i].buy_price;
+					}
+				}
+			}
+
+			// 3. Create Order
 			const { data: order, error: orderError } = await supabase
 				.from('quincees_orders')
 				.insert({
@@ -100,7 +149,7 @@
 
 			if (orderError) throw orderError;
 
-			// 3. Create Order Items
+			// 4. Create Order Items
 			const orderItems = validItems.map(item => ({
 				order_id: order.id,
 				product_id: item.product_id,
@@ -114,7 +163,7 @@
 
 			if (itemsError) throw itemsError;
 
-			// 4. Update Prices (Existing logic)
+			// 5. Update Prices (Existing logic)
 			const buyPriceUpdates = validItems
 				.filter(item => item.buy_price !== item.original_buy_price)
 				.map(item => ({
@@ -133,7 +182,7 @@
 				}
 			}
 
-			// 5. Update Customer-Specific Sell Prices
+			// 6. Update Customer-Specific Sell Prices
 			const sellPriceUpdates = validItems.map(item => ({
 				customer_id: customerId,
 				product_id: item.product_id,

@@ -8,15 +8,20 @@
 
 <div class="order-card" transition:fly={{ x: -20, duration: 300 }}>
 	<div class="card-header">
-		<ProductSearch 
-			bind:value={item.name} 
-			bind:sell_price={item.sell_price}
-			bind:buy_price={item.buy_price}
-			bind:original_buy_price={item.original_buy_price}
-			bind:product_id={item.product_id}
-			{customerId}
-			placeholder="Item Name"
-		/>
+		<div class="product-search-wrapper">
+			<ProductSearch 
+				bind:value={item.name} 
+				bind:sell_price={item.sell_price}
+				bind:buy_price={item.buy_price}
+				bind:original_buy_price={item.original_buy_price}
+				bind:product_id={item.product_id}
+				{customerId}
+				placeholder="Item Name"
+			/>
+			{#if !item.product_id && item.name}
+				<span class="new-badge">NEW</span>
+			{/if}
+		</div>
 		<button 
 			onclick={() => removeItem(item.id)} 
 			class="delete-btn"
@@ -51,6 +56,7 @@
 					class="input-field"
 					class:price-lower={item.product_id && item.buy_price < item.original_buy_price}
 					class:price-higher={item.product_id && item.buy_price > item.original_buy_price}
+					class:price-required={!item.product_id && item.name && (!item.buy_price || item.buy_price <= 0)}
 				/>
 			</div>
 		</div>
@@ -193,5 +199,31 @@
 		color: #dc2626 !important;
 		background: #fef2f2 !important;
 		border-color: #fecaca !important;
+	}
+
+	.price-required {
+		border-color: #ef4444 !important;
+		background: #fef2f2 !important;
+	}
+
+	.product-search-wrapper {
+		flex: 1;
+		position: relative;
+	}
+
+	.new-badge {
+		position: absolute;
+		right: 0.5rem;
+		top: 50%;
+		transform: translateY(-50%);
+		background: #3b82f6;
+		color: white;
+		font-size: 0.6rem;
+		font-weight: 800;
+		padding: 0.1rem 0.35rem;
+		border-radius: 4px;
+		letter-spacing: 0.05em;
+		pointer-events: none;
+		z-index: 10;
 	}
 </style>

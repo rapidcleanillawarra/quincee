@@ -21,7 +21,7 @@
 		<tbody>
 			{#each items as item (item.id)}
 				<tr transition:slide={{ duration: 300 }}>
-					<td>
+					<td class="product-cell">
 						<ProductSearch 
 							bind:value={item.name} 
 							bind:sell_price={item.sell_price}
@@ -31,6 +31,9 @@
 							{customerId}
 							placeholder="e.g. Talong"
 						/>
+						{#if !item.product_id && item.name}
+							<span class="new-badge">NEW</span>
+						{/if}
 					</td>
 					<td>
 						<input 
@@ -51,6 +54,7 @@
 									class="input-field price-input"
 									class:price-lower={item.product_id && item.buy_price < item.original_buy_price}
 									class:price-higher={item.product_id && item.buy_price > item.original_buy_price}
+									class:price-required={!item.product_id && item.name && (!item.buy_price || item.buy_price <= 0)}
 								/>
 						</div>
 					</td>
@@ -208,6 +212,31 @@
 		color: #dc2626 !important;
 		background: #fef2f2 !important;
 		border-color: #fecaca !important;
+	}
+
+	.price-required {
+		border-color: #ef4444 !important;
+		background: #fef2f2 !important;
+	}
+
+	.new-badge {
+		position: absolute;
+		right: 1.5rem;
+		top: 50%;
+		transform: translateY(-50%);
+		background: #3b82f6;
+		color: white;
+		font-size: 0.65rem;
+		font-weight: 800;
+		padding: 0.15rem 0.4rem;
+		border-radius: 4px;
+		letter-spacing: 0.05em;
+		pointer-events: none;
+		z-index: 10;
+	}
+
+	.product-cell {
+		position: relative;
 	}
 
 	@media (max-width: 639px) {

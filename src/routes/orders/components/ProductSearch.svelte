@@ -100,6 +100,7 @@
     function handleInput(e) {
         searchTerm = e.target.value;
         value = searchTerm;
+        product_id = null; // Reset product_id for new/unknown items
         showDropdown = true;
     }
 
