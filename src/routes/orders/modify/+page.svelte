@@ -4,11 +4,11 @@
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { supabase } from '$lib/supabase';
-	import OrderTable from './components/OrderTable.svelte';
-	import OrderCard from './components/OrderCard.svelte';
-	import OrderSummary from './components/OrderSummary.svelte';
-	import CustomerSearch from './components/CustomerSearch.svelte';
-	import { formatCurrency } from './utils/format';
+	import OrderTable from '../components/OrderTable.svelte';
+	import OrderCard from '../components/OrderCard.svelte';
+	import OrderSummary from '../components/OrderSummary.svelte';
+	import CustomerSearch from '../components/CustomerSearch.svelte';
+	import { formatCurrency } from '../utils/format';
 
 	// State for order items
 	let items = $state([
