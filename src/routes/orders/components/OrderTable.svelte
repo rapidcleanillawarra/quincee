@@ -1,6 +1,7 @@
 <script>
 	import { slide } from 'svelte/transition';
 	import { formatCurrency } from '../utils/format';
+	import ProductSearch from './ProductSearch.svelte';
 
 	let { items = $bindable(), removeItem } = $props();
 </script>
@@ -20,11 +21,10 @@
 			{#each items as item (item.id)}
 				<tr transition:slide={{ duration: 300 }}>
 					<td>
-						<input 
-							type="text" 
-							placeholder="e.g. Talong" 
-							bind:value={item.name}
-							class="input-field"
+						<ProductSearch 
+							bind:value={item.name} 
+							bind:price={item.price}
+							placeholder="e.g. Talong"
 						/>
 					</td>
 					<td>

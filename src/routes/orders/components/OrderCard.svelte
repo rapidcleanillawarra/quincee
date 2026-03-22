@@ -1,17 +1,17 @@
 <script>
 	import { fly } from 'svelte/transition';
 	import { formatCurrency } from '../utils/format';
+	import ProductSearch from './ProductSearch.svelte';
 
 	let { item = $bindable(), removeItem } = $props();
 </script>
 
 <div class="order-card" transition:fly={{ x: -20, duration: 300 }}>
 	<div class="card-header">
-		<input 
-			type="text" 
-			placeholder="Item Name" 
-			bind:value={item.name}
-			class="input-field name-input"
+		<ProductSearch 
+			bind:value={item.name} 
+			bind:price={item.price}
+			placeholder="Item Name"
 		/>
 		<button 
 			onclick={() => removeItem(item.id)} 
@@ -92,10 +92,6 @@
 		align-items: center;
 	}
 
-	.name-input {
-		font-weight: 600;
-		font-size: 1.05rem;
-	}
 
 	.card-body {
 		display: grid;
