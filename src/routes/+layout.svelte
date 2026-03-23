@@ -21,6 +21,7 @@
 			<a href="/prices" class="nav-link" class:active={page.url.pathname === '/prices'}>Prices</a>
 			<a href="/orders" class="nav-link" class:active={page.url.pathname === '/orders'}>Orders</a>
 			<a href="/suppliers" class="nav-link" class:active={page.url.pathname === '/suppliers'}>Suppliers</a>
+			<a href="/stocks" class="nav-link" class:active={page.url.pathname === '/stocks'}>Stocks</a>
 		</div>
 	</div>
 </nav>
