@@ -67,6 +67,8 @@
 
 	function getStatusClass(status) {
 		switch (status?.toLowerCase()) {
+			case 'quoted': return 'status-quoted';
+			case 'unpaid': return 'status-unpaid';
 			case 'completed': return 'status-completed';
 			case 'pending': return 'status-pending';
 			case 'cancelled': return 'status-cancelled';
@@ -384,6 +386,16 @@
 	.status-completed {
 		background: #dcfce7;
 		color: #166534;
+	}
+
+	.status-quoted {
+		background: #dbeafe;
+		color: #1e40af;
+	}
+
+	.status-unpaid {
+		background: #ffedd5;
+		color: #9a3412;
 	}
 
 	.status-pending {
