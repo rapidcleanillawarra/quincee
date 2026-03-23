@@ -7,6 +7,7 @@
 	let orders = $state([]);
 	let isLoading = $state(true);
 	let overallProfit = $derived(orders.reduce((sum, order) => sum + (order.profit || 0), 0));
+	let completedProfit = $derived(orders.filter(order => order.status?.toLowerCase() === 'completed').reduce((sum, order) => sum + (order.profit || 0), 0));
 
 	import { formatCurrency, formatDate } from './utils/format';
 
@@ -112,6 +113,10 @@
 					<div class="total-profit-badge" class:positive={overallProfit > 0} class:negative={overallProfit < 0} in:fly={{ x: 20, duration: 600, delay: 400, easing: quintOut }}>
 						<span class="label">Total Profit:</span>
 						<span class="value">{formatCurrency(overallProfit)}</span>
+					</div>
+					<div class="total-profit-badge" class:positive={completedProfit > 0} class:negative={completedProfit < 0} in:fly={{ x: 20, duration: 600, delay: 500, easing: quintOut }}>
+						<span class="label">Completed Profit:</span>
+						<span class="value">{formatCurrency(completedProfit)}</span>
 					</div>
 				{/if}
 			</div>
