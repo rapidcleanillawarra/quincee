@@ -109,6 +109,8 @@
 		<div class="header-left">
 			<div class="title-row">
 				<h1>Order History</h1>
+			</div>
+			<div class="badges-row">
 				{#if !isLoading && orders.length > 0}
 					<div class="total-profit-badge" class:positive={overallProfit > 0} class:negative={overallProfit < 0} in:fly={{ x: 20, duration: 600, delay: 400, easing: quintOut }}>
 						<span class="label">Total Profit:</span>
@@ -208,28 +210,39 @@
 
 <style>
 	.container {
-		max-width: 1000px;
+		max-width: 1200px;
 		margin: 0 auto;
 		padding: 2rem 1.5rem;
 		min-height: calc(100vh - 64px);
 		display: flex;
 		flex-direction: column;
 		gap: 2rem;
+		font-family: 'Inter', system-ui, -apple-system, sans-serif;
 	}
 
 	.header {
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-end;
-		gap: 1rem;
+		gap: 1.5rem;
+		background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.5));
+		backdrop-filter: blur(10px);
+		padding: 1.5rem 2rem;
+		border-radius: 20px;
+		border: 1px solid rgba(255, 255, 255, 0.8);
+		box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
 	}
 
 	.header-left h1 {
-		font-size: 2rem;
+		font-size: 2.25rem;
 		font-weight: 800;
 		color: #0f172a;
 		margin: 0;
-		letter-spacing: -0.025em;
+		letter-spacing: -0.03em;
+		background: linear-gradient(to right, #0f172a, #334155);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
 	}
 
 	.title-row {
@@ -239,28 +252,52 @@
 		flex-wrap: wrap;
 	}
 
+	.badges-row {
+		display: flex;
+		gap: 1rem;
+		margin-top: 1rem;
+		flex-wrap: wrap;
+	}
+
 	.total-profit-badge {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.5rem 1rem;
-		background: #f8fafc;
-		border: 1px solid #e2e8f0;
-		border-radius: 12px;
+		background: white;
+		border: 1px solid rgba(226, 232, 240, 0.8);
+		border-radius: 99px;
 		font-size: 0.9rem;
 		font-weight: 600;
-		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+		box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.05);
+		transition: transform 0.2s, box-shadow 0.2s;
+	}
+
+	.total-profit-badge:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 6px 20px -5px rgba(0, 0, 0, 0.08);
 	}
 
 	.total-profit-badge .label {
 		color: #64748b;
-		font-size: 0.8rem;
+		font-size: 0.75rem;
 		text-transform: uppercase;
-		letter-spacing: 0.025em;
+		letter-spacing: 0.05em;
+		font-weight: 700;
+	}
+
+	.total-profit-badge.positive {
+		border-color: #bbf7d0;
+		background: linear-gradient(to right, #ffffff, #f0fdf4);
 	}
 
 	.total-profit-badge.positive .value {
 		color: #16a34a;
+	}
+
+	.total-profit-badge.negative {
+		border-color: #fecaca;
+		background: linear-gradient(to right, #ffffff, #fef2f2);
 	}
 
 	.total-profit-badge.negative .value {
@@ -269,33 +306,38 @@
 
 	.total-profit-badge .value {
 		font-size: 1.1rem;
-		font-weight: 700;
+		font-weight: 800;
 	}
 
 	.subtitle {
 		color: #64748b;
-		margin: 0.25rem 0 0 0;
+		margin: 0.5rem 0 0 0;
 		font-size: 1rem;
+		font-weight: 500;
 	}
 
 	.new-order-btn {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		background: #3b82f6;
+		background: linear-gradient(135deg, #3b82f6, #2563eb);
 		color: white;
-		padding: 0.75rem 1.25rem;
-		border-radius: 10px;
+		padding: 0.875rem 1.5rem;
+		border-radius: 14px;
 		font-weight: 600;
 		text-decoration: none;
-		transition: all 0.2s;
-		box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2), 0 2px 4px -2px rgba(59, 130, 246, 0.1);
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		box-shadow: 0 4px 15px -3px rgba(59, 130, 246, 0.4);
+		white-space: nowrap;
 	}
 
 	.new-order-btn:hover {
-		background: #2563eb;
-		transform: translateY(-1px);
-		box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+		transform: translateY(-2px) scale(1.02);
+		box-shadow: 0 8px 25px -5px rgba(59, 130, 246, 0.5);
+	}
+
+	.new-order-btn:active {
+		transform: translateY(0) scale(0.98);
 	}
 
 	.main-content {
@@ -303,29 +345,31 @@
 	}
 
 	.table-container {
-		background: rgba(255, 255, 255, 0.7);
-		backdrop-filter: blur(10px);
-		border: 1px solid #e2e8f0;
-		border-radius: 16px;
+		background: rgba(255, 255, 255, 0.8);
+		backdrop-filter: blur(20px);
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		border-radius: 20px;
 		overflow: hidden;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+		box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
 	}
 
 	.orders-table {
 		width: 100%;
-		border-collapse: collapse;
+		border-collapse: separate;
+		border-spacing: 0;
 		text-align: left;
 	}
 
 	.orders-table th {
-		padding: 1rem 1.5rem;
+		padding: 1.25rem 1.5rem;
 		font-size: 0.75rem;
 		font-weight: 700;
 		color: #64748b;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		background: #f8fafc;
-		border-bottom: 1px solid #e2e8f0;
+		background: rgba(248, 250, 252, 0.8);
+		border-bottom: 2px solid #e2e8f0;
+		backdrop-filter: blur(10px);
 	}
 
 	.orders-table td {
@@ -333,14 +377,16 @@
 		border-bottom: 1px solid #f1f5f9;
 		color: #334155;
 		font-size: 0.95rem;
+		background: transparent;
+		transition: background-color 0.2s ease;
 	}
 
 	.orders-table tr:last-child td {
 		border-bottom: none;
 	}
 
-	.orders-table tr:hover {
-		background: #f8fafc;
+	.orders-table tr:hover td {
+		background: rgba(248, 250, 252, 0.9);
 	}
 
 	.order-id {
@@ -350,24 +396,39 @@
 	.id-badge {
 		background: #f1f5f9;
 		color: #475569;
-		padding: 0.25rem 0.6rem;
-		border-radius: 6px;
-		font-family: monospace;
+		padding: 0.35rem 0.7rem;
+		border-radius: 8px;
+		font-family: 'JetBrains Mono', monospace;
 		font-size: 0.85rem;
+		border: 1px solid #e2e8f0;
 	}
 
 	.customer-name {
 		font-weight: 600;
 		color: #1e293b;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.customer-name::before {
+		content: '';
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+		margin-right: 0.25rem;
 	}
 
 	.amount-cell {
 		font-weight: 700;
 		color: #0f172a;
+		font-size: 1.05rem;
 	}
 
 	.profit-cell {
-		font-weight: 600;
+		font-weight: 700;
 	}
 
 	.profit-cell.positive {
@@ -381,80 +442,96 @@
 	.status-pill {
 		display: inline-flex;
 		align-items: center;
-		padding: 0.25rem 0.75rem;
-		border-radius: 9999px;
+		padding: 0.35rem 0.85rem;
+		border-radius: 99px;
 		font-size: 0.75rem;
-		font-weight: 600;
-		text-transform: capitalize;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 	}
 
 	.status-completed {
 		background: #dcfce7;
 		color: #166534;
+		border: 1px solid #bbf7d0;
 	}
 
 	.status-quoted {
 		background: #dbeafe;
 		color: #1e40af;
+		border: 1px solid #bfdbfe;
 	}
 
 	.status-unpaid {
 		background: #ffedd5;
 		color: #9a3412;
+		border: 1px solid #fed7aa;
 	}
 
 	.status-pending {
 		background: #fef9c3;
 		color: #854d0e;
+		border: 1px solid #fef08a;
 	}
 
 	.status-cancelled {
 		background: #fee2e2;
 		color: #991b1b;
+		border: 1px solid #fecaca;
 	}
 
 	.status-default {
 		background: #f1f5f9;
 		color: #475569;
+		border: 1px solid #e2e8f0;
 	}
 
 	.edit-link {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.4rem;
 		color: #3b82f6;
+		background: rgba(59, 130, 246, 0.1);
+		padding: 0.5rem 0.75rem;
+		border-radius: 8px;
 		text-decoration: none;
 		font-weight: 600;
-		font-size: 0.9rem;
-		transition: color 0.15s;
+		font-size: 0.85rem;
+		transition: all 0.2s;
 	}
 
 	.edit-link:hover {
-		color: #1d4ed8;
-	}
-
-	.actions-cell {
-		display: flex;
-		justify-content: flex-end;
-		gap: 1rem;
+		color: white;
+		background: #3b82f6;
 	}
 
 	.delete-btn {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: 0.4rem;
 		color: #ef4444;
-		background: none;
+		background: rgba(239, 68, 68, 0.1);
 		border: none;
+		border-radius: 8px;
+		padding: 0.5rem 0.75rem;
 		font-weight: 600;
-		font-size: 0.9rem;
+		font-size: 0.85rem;
 		cursor: pointer;
-		padding: 0;
-		transition: color 0.15s;
+		transition: all 0.2s;
 	}
 
 	.delete-btn:hover {
-		color: #b91c1c;
+		color: white;
+		background: #ef4444;
+	}
+
+	.actions-cell {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
 	}
 
 	.text-right {
@@ -470,6 +547,9 @@
 		padding: 5rem;
 		color: #64748b;
 		gap: 1.25rem;
+		background: rgba(255,255,255,0.5);
+		border-radius: 20px;
+		backdrop-filter: blur(10px);
 	}
 
 	.spinner {
@@ -487,38 +567,50 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 5rem 2rem;
+		padding: 6rem 2rem;
 		text-align: center;
-		background: white;
+		background: rgba(255, 255, 255, 0.8);
+		backdrop-filter: blur(10px);
 		border-radius: 20px;
-		border: 1px dashed #cbd5e1;
+		border: 2px dashed #cbd5e1;
+		box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05);
 	}
 
 	.empty-icon {
 		font-size: 4rem;
 		margin-bottom: 1.5rem;
+		filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+		animation: float 3s ease-in-out infinite;
 	}
 
 	.empty-state h3 {
-		font-size: 1.5rem;
+		font-size: 1.75rem;
 		color: #0f172a;
 		margin: 0;
+		font-weight: 800;
 	}
 
 	.empty-state p {
 		color: #64748b;
 		max-width: 320px;
-		margin: 0.75rem 0 1.5rem 0;
+		margin: 0.75rem 0 2rem 0;
+		line-height: 1.5;
 	}
 
 	.btn-primary {
-		background: #3b82f6;
+		background: linear-gradient(135deg, #3b82f6, #2563eb);
 		color: white;
-		padding: 0.75rem 1.5rem;
-		border-radius: 10px;
+		padding: 0.875rem 2rem;
+		border-radius: 12px;
 		font-weight: 600;
 		text-decoration: none;
-		transition: all 0.2s;
+		transition: all 0.3s;
+		box-shadow: 0 4px 15px -3px rgba(59, 130, 246, 0.4);
+	}
+
+	.btn-primary:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 8px 25px -5px rgba(59, 130, 246, 0.5);
 	}
 
 	@keyframes spin {
@@ -526,52 +618,134 @@
 		100% { transform: rotate(360deg); }
 	}
 
+	@keyframes float {
+		0% { transform: translateY(0px); }
+		50% { transform: translateY(-10px); }
+		100% { transform: translateY(0px); }
+	}
+
 	@media (max-width: 768px) {
 		.container {
-			padding: 1.5rem 1rem;
+			padding: 0.5rem;
+			gap: 1rem;
+			box-sizing: border-box;
 		}
 		
 		.header {
 			flex-direction: column;
+			align-items: stretch;
+			padding: 1.25rem;
+			text-align: left;
+			gap: 1rem;
+			box-sizing: border-box;
+		}
+
+		.header-left h1 {
+			font-size: 1.75rem;
+		}
+
+		.title-row {
+			flex-direction: column;
 			align-items: flex-start;
+			gap: 0.5rem;
+		}
+
+		.badges-row {
+			flex-direction: column;
+			width: 100%;
+			gap: 0.5rem;
+		}
+
+		.total-profit-badge {
+			width: 100%;
+			justify-content: space-between;
+			box-sizing: border-box;
+			padding: 0.75rem 1rem;
 		}
 		
 		.new-order-btn {
 			width: 100%;
 			justify-content: center;
+			padding: 1rem;
+			box-sizing: border-box;
+		}
+
+		.table-container {
+			background: transparent;
+			border: none;
+			box-shadow: none;
+			backdrop-filter: none;
+			padding: 0;
+		}
+
+		.orders-table, .orders-table tbody, .orders-table tr, .orders-table td {
+			display: block;
+			width: 100%;
+			box-sizing: border-box;
 		}
 
 		.orders-table thead {
 			display: none;
 		}
 
-		.orders-table td {
-			display: block;
-			padding: 0.75rem 1.5rem;
-			border: none;
+		.orders-table tr {
+			background: white;
+			border-radius: 16px;
+			margin-bottom: 1rem;
+			border: 1px solid #e2e8f0;
+			box-shadow: 0 4px 15px -5px rgba(0,0,0,0.05);
+			overflow: hidden;
+			transition: transform 0.2s;
 		}
 
-		.orders-table td:first-child {
-			padding-top: 1.5rem;
+		.orders-table tr:hover {
+			transform: scale(1.01);
+		}
+
+		.orders-table td {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 0.85rem 1rem;
+			border-bottom: 1px solid #f1f5f9;
+			text-align: right;
 		}
 
 		.orders-table td:last-child {
-			padding-bottom: 1.5rem;
-			border-bottom: 1px solid #f1f5f9;
+			border-bottom: none;
+			background: #f8fafc;
+			padding: 1rem;
+			justify-content: center;
 		}
 
 		.orders-table td::before {
 			content: attr(data-label);
-			display: block;
-			font-size: 0.7rem;
+			font-size: 0.75rem;
 			font-weight: 700;
 			text-transform: uppercase;
-			color: #94a3b8;
-			margin-bottom: 0.25rem;
+			color: #64748b;
+			text-align: left;
+			flex-shrink: 0;
+			margin-right: 0.5rem;
+		}
+		
+		.customer-name::before {
+			display: none;
 		}
 
-		.amount-cell {
-			font-size: 1.25rem;
+		.customer-info {
+			text-align: right;
+		}
+
+		.actions-cell {
+			width: 100%;
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 0.75rem;
+		}
+		
+		.edit-link, .delete-btn {
+			width: 100%;
 		}
 	}
 </style>
