@@ -3,7 +3,15 @@
 	import { formatCurrency } from '../utils/format';
 	import ProductSearch from './ProductSearch.svelte';
 
-	let { items = $bindable(), removeItem, addItem, lastAddedRowId, customerId } = $props();
+	let { 
+		items = $bindable(), 
+		removeItem, 
+		addItem, 
+		lastAddedRowId, 
+		customerId,
+		toggleAllSelection,
+		allSelected
+	} = $props();
 
 	function handleKeyDown(e, index) {
 		if (e.key === 'Enter') {
@@ -18,6 +26,14 @@
 	<table class="order-table">
 		<thead>
 			<tr>
+				<th class="selection-header">
+					<input 
+						type="checkbox" 
+						checked={allSelected} 
+						onchange={toggleAllSelection}
+						class="checkbox-input"
+					/>
+				</th>
 				<th>Item Name</th>
 				<th>Quantity</th>
 				<th>Buy Price</th>
@@ -29,7 +45,14 @@
 		</thead>
 		<tbody>
 			{#each items as item, index (item.id)}
-				<tr transition:slide={{ duration: 300 }}>
+				<tr transition:slide={{ duration: 300 }} class:row-selected={item.selected}>
+					<td class="selection-cell">
+						<input 
+							type="checkbox" 
+							bind:checked={item.selected}
+							class="checkbox-input"
+						/>
+					</td>
 					<td class="product-cell">
 						<ProductSearch 
 							bind:value={item.name} 
@@ -145,6 +168,25 @@
 
 	.order-table tr:last-child td {
 		border-bottom: none;
+	}
+
+	.selection-header, .selection-cell {
+		width: 40px;
+		text-align: center;
+		padding: 0.5rem !important;
+	}
+
+	.checkbox-input {
+		width: 18px;
+		height: 18px;
+		cursor: pointer;
+		accent-color: #3b82f6;
+		border-radius: 4px;
+		vertical-align: middle;
+	}
+
+	.row-selected {
+		background: rgba(59, 130, 246, 0.03);
 	}
 
 	.input-field {

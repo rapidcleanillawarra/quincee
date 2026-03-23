@@ -12,8 +12,15 @@
 	}
 </script>
 
-<div class="order-card" transition:fly={{ x: -20, duration: 300 }}>
+<div class="order-card" transition:fly={{ x: -20, duration: 300 }} class:card-selected={item.selected}>
 	<div class="card-header">
+		<div class="selection-wrapper">
+			<input 
+				type="checkbox" 
+				bind:checked={item.selected}
+				class="checkbox-input"
+			/>
+		</div>
 		<div class="product-search-wrapper">
 			<ProductSearch 
 				bind:value={item.name} 
@@ -126,12 +133,33 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+		transition: all 0.2s;
+	}
+
+	.card-selected {
+		background: #f0f9ff;
+		border-color: #bae6fd;
+		box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.1);
 	}
 
 	.card-header {
 		display: flex;
-		gap: 0.5rem;
+		gap: 0.75rem;
 		align-items: center;
+	}
+
+	.selection-wrapper {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.checkbox-input {
+		width: 18px;
+		height: 18px;
+		cursor: pointer;
+		accent-color: #3b82f6;
+		border-radius: 4px;
 	}
 
 

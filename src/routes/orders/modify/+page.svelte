@@ -13,7 +13,7 @@
 
 	// State for order items
 	let items = $state([
-		{ id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0 }
+		{ id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0, selected: false }
 	]);
 
 	// State for customer
@@ -44,11 +44,20 @@
 			quantity: 1,
 			sell_price: 0,
 			buy_price: 0,
-			original_buy_price: 0
+			original_buy_price: 0,
+			selected: false
 		};
 		items.push(newItem);
 		lastAddedRowId = newItem.id;
 		return newItem;
+	}
+
+	let anySelected = $derived(items.some(item => item.selected));
+	let allSelected = $derived(items.length > 0 && items.every(item => item.selected));
+
+	function toggleAllSelection() {
+		const targetValue = !allSelected;
+		items.forEach(item => item.selected = targetValue);
 	}
 
 	function removeItem(id) {
@@ -56,7 +65,7 @@
 			items = items.filter(item => item.id !== id);
 		} else {
 			// Reset the last item instead of deleting it
-			items[0] = { id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0 };
+			items[0] = { id: crypto.randomUUID(), product_id: null, name: '', quantity: 1, sell_price: 0, buy_price: 0, original_buy_price: 0, selected: false };
 		}
 	}
 
@@ -106,7 +115,8 @@
 						quantity: item.quantity,
 						sell_price: item.price_at_order,
 						buy_price: priceData?.buy_price || 0,
-						original_buy_price: priceData?.buy_price || 0
+						original_buy_price: priceData?.buy_price || 0,
+						selected: false
 					};
 				}));
 
@@ -330,6 +340,81 @@
 		}
 	}
 
+	async function handleCreateNewFromSelected() {
+		const selectedItems = items.filter(item => item.selected && (item.product_id || item.name));
+		if (selectedItems.length === 0) {
+			alert('Please select at least one valid item.');
+			return;
+		}
+
+		if (!confirm(`Create a new order for ${selectedCustomerName} with ${selectedItems.length} selected items?`)) {
+			return;
+		}
+
+		isSaving = true;
+		try {
+			// 1. Ensure customer exists (similar to handleSave)
+			let customerId = selectedCustomerId;
+			if (!customerId) {
+				const { data: existingCust } = await supabase
+					.from('quincees_customers')
+					.select('id')
+					.eq('name', selectedCustomerName)
+					.maybeSingle();
+				
+				if (existingCust) {
+					customerId = existingCust.id;
+				} else {
+					const { data: newCustomer, error: custError } = await supabase
+						.from('quincees_customers')
+						.insert({ name: selectedCustomerName })
+						.select()
+						.single();
+					
+					if (custError) throw custError;
+					customerId = newCustomer.id;
+				}
+				selectedCustomerId = customerId;
+			}
+
+			// 2. Create New Order
+			const { data: newOrder, error: orderError } = await supabase
+				.from('quincees_orders')
+				.insert({
+					customer_id: customerId,
+					customer_username: selectedCustomerName,
+					total_amount: selectedItems.reduce((sum, item) => sum + (item.quantity * item.sell_price), 0),
+					status: 'quoted'
+				})
+				.select()
+				.single();
+			
+			if (orderError) throw orderError;
+
+			// 3. Create Order Items
+			const newOrderItems = selectedItems.map(item => ({
+				order_id: newOrder.id,
+				product_id: item.product_id,
+				quantity: item.quantity,
+				price_at_order: item.sell_price
+			}));
+
+			const { error: itemsError } = await supabase
+				.from('quincees_order_items')
+				.insert(newOrderItems);
+			
+			if (itemsError) throw itemsError;
+
+			alert('New order created successfully!');
+			goto(`/orders/modify?id=${newOrder.id}`);
+		} catch (error) {
+			console.error('Error creating new order from selection:', error);
+			alert('Failed to create new order: ' + error.message);
+		} finally {
+			isSaving = false;
+		}
+	}
+
 	async function handleDelete() {
 		if (!orderId) return;
 		if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
@@ -388,6 +473,27 @@
 			</div>
 		{/if}
 
+		{#if anySelected}
+			<div class="selection-actions" in:fly={{ y: 20, duration: 400, easing: quintOut }}>
+				<div class="selection-count">
+					{items.filter(i => i.selected).length} items selected
+				</div>
+				<button 
+					class="create-new-btn" 
+					onclick={handleCreateNewFromSelected}
+					disabled={isSaving}
+				>
+					<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+						<polyline points="14 2 14 8 20 8"></polyline>
+						<line x1="12" y1="18" x2="12" y2="12"></line>
+						<line x1="9" y1="15" x2="15" y2="15"></line>
+					</svg>
+					Create as New Order
+				</button>
+			</div>
+		{/if}
+
 		<div class="customer-section">
 			<label for="customer-search">Customer Name <span class="required">*</span></label>
 			<CustomerSearch 
@@ -436,12 +542,28 @@
 			</div>
 		{:else}
 			<!-- Desktop Table View -->
-			<OrderTable bind:items {removeItem} {addItem} {lastAddedRowId} customerId={selectedCustomerId} />
+			<OrderTable 
+				bind:items 
+				{removeItem} 
+				{addItem} 
+				{lastAddedRowId} 
+				customerId={selectedCustomerId} 
+				{toggleAllSelection}
+				{allSelected}
+			/>
 
 			<!-- Mobile Card View -->
 			<div class="mobile-only card-list">
 				{#each items as _, i (items[i].id)}
-					<OrderCard bind:item={items[i]} {removeItem} {addItem} {lastAddedRowId} index={i} isLast={i === items.length - 1} customerId={selectedCustomerId} />
+					<OrderCard 
+						bind:item={items[i]} 
+						{removeItem} 
+						{addItem} 
+						{lastAddedRowId} 
+						index={i} 
+						isLast={i === items.length - 1} 
+						customerId={selectedCustomerId} 
+					/>
 				{/each}
 			</div>
 
@@ -618,6 +740,48 @@
 	}
 
 	.delete-order-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.selection-actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		background: #f0f9ff;
+		padding: 0.75rem 1.25rem;
+		border-radius: 12px;
+		border: 1px solid #bae6fd;
+		margin-bottom: 0.5rem;
+	}
+
+	.selection-count {
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: #0369a1;
+	}
+
+	.create-new-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 1rem;
+		background: #0ea5e9;
+		color: #fff;
+		border: none;
+		border-radius: 8px;
+		font-size: 0.85rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.create-new-btn:hover:not(:disabled) {
+		background: #0284c7;
+		box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+	}
+
+	.create-new-btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
