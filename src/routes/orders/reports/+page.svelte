@@ -9,17 +9,29 @@
 	let profitOrders = $state([]);
 	let isLoading = $state(true);
 
+function toAmount(value) {
+	const num = Number(value);
+	return Number.isFinite(num) ? num : 0;
+}
+
+function normalizeStatus(status) {
+	const normalized = typeof status === 'string' ? status.trim().toLowerCase() : '';
+	return normalized || 'pending';
+}
+
 	// ── Grand‑total by order status ────────────────────────────────────────────
 	let statusTotals = $derived.by(() => {
 		const map = {};
 		for (const order of orders) {
-			const status = order.status || 'pending';
-			map[status] = (map[status] || 0) + (order.total_amount || 0);
+		const status = normalizeStatus(order.status);
+		map[status] = (map[status] || 0) + toAmount(order.total_amount);
 		}
-		return Object.entries(map).map(([status, total]) => ({ status, total }));
+	return Object.entries(map)
+		.map(([status, total]) => ({ status, total }))
+		.sort((a, b) => b.total - a.total);
 	});
 
-	let grandTotal = $derived(orders.reduce((sum, o) => sum + (o.total_amount || 0), 0));
+let grandTotal = $derived.by(() => orders.reduce((sum, o) => sum + toAmount(o.total_amount), 0));
 
 	// ── Profit by payment_status ────────────────────────────────────────────────
 	let profitByPaymentStatus = $derived.by(() => {
@@ -31,7 +43,7 @@
 				(s, item) => s + item.quantity * (item.buy_price_at_order ?? 0),
 				0
 			);
-			const revenue = order.total_amount || 0;
+		const revenue = toAmount(order.total_amount);
 			map[key] = (map[key] || 0) + (revenue - capital);
 		}
 		return [
@@ -43,7 +55,7 @@
 
 	let totalProfit = $derived(profitByPaymentStatus.reduce((s, r) => s + r.profit, 0));
 
-	let totalRevenue = $derived(profitOrders.reduce((s, o) => s + (o.total_amount || 0), 0));
+let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(o.total_amount), 0));
 	let totalCapital = $derived(
 		profitOrders.reduce((s, o) =>
 			s + (o.quincees_order_items || []).reduce(
@@ -293,7 +305,7 @@
 						<tbody>
 							{#each ['paid','partial','unpaid'] as ps}
 								{@const rowOrders = profitOrders.filter(o => (o.payment_status || 'unpaid') === ps)}
-								{@const revenue = rowOrders.reduce((s, o) => s + (o.total_amount || 0), 0)}
+								{@const revenue = rowOrders.reduce((s, o) => s + toAmount(o.total_amount), 0)}
 								{@const capital = rowOrders.reduce((s, o) =>
 									s + (o.quincees_order_items || []).reduce(
 										(si, item) => si + item.quantity * (item.buy_price_at_order ?? 0), 0
