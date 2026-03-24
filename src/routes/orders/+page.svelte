@@ -9,7 +9,47 @@
 	let overallProfit = $derived(orders.reduce((sum, order) => sum + (order.profit || 0), 0));
 	let completedProfit = $derived(orders.filter(order => order.status?.toLowerCase() === 'completed').reduce((sum, order) => sum + (order.profit || 0), 0));
 
+	let selectedAction = $state("");
+	let anySelected = $derived(orders.some(o => o.selected));
+	let allSelected = $derived(orders.length > 0 && orders.every(o => o.selected));
+
 	import { formatCurrency, formatDate } from './utils/format';
+
+	function toggleAllSelection() {
+		const targetValue = !allSelected;
+		orders.forEach(o => o.selected = targetValue);
+	}
+
+	async function handleApplyAction() {
+		if (selectedAction === 'mark_paid') {
+			const selectedOrders = orders.filter(o => o.selected);
+			if (selectedOrders.length === 0) return;
+			
+			if (!confirm(`Mark ${selectedOrders.length} orders as paid?`)) return;
+			
+			try {
+				const orderIds = selectedOrders.map(o => o.id);
+				const { error } = await supabase
+					.from('quincees_orders')
+					.update({ payment_status: 'paid' })
+					.in('id', orderIds);
+					
+				if (error) throw error;
+				
+				orders.forEach(o => {
+					if (o.selected) {
+						o.payment_status = 'paid';
+						o.selected = false;
+					}
+				});
+				selectedAction = "";
+				alert('Orders marked as paid successfully');
+			} catch (error) {
+				console.error('Error marking as paid:', error);
+				alert('Failed to mark orders as paid: ' + error.message);
+			}
+		}
+	}
 
 	async function fetchOrders() {
 		isLoading = true;
@@ -53,7 +93,7 @@
 					const buyPrice = priceMap[item.product_id] || 0;
 					return sum + ((item.price_at_order - buyPrice) * item.quantity);
 				}, 0);
-				return { ...order, profit };
+				return { ...order, profit, selected: false };
 			});
 		} catch (error) {
 			console.error('Error fetching orders:', error);
@@ -147,10 +187,23 @@
 				<a href="/orders/modify" class="btn-primary">Create Your First Order</a>
 			</div>
 		{:else}
+			{#if orders.length > 0}
+				<div class="actions-bar" in:fly={{ y: 20, duration: 600, delay: 100, easing: quintOut }}>
+					<select bind:value={selectedAction} class="action-select">
+						<option value="">Actions</option>
+						<option value="mark_paid">Mark as Paid</option>
+					</select>
+					<button onclick={handleApplyAction} disabled={!selectedAction || !anySelected} class="btn-secondary">Apply to Selected</button>
+				</div>
+			{/if}
+
 			<div class="table-container" in:fly={{ y: 20, duration: 800, delay: 200, easing: quintOut }}>
 				<table class="orders-table">
 					<thead>
 						<tr>
+							<th class="checkbox-cell">
+								<input type="checkbox" checked={allSelected} onchange={toggleAllSelection} aria-label="Select all orders" />
+							</th>
 							<th>Order ID</th>
 							<th>Date</th>
 							<th>Customer</th>
@@ -162,7 +215,10 @@
 					</thead>
 					<tbody>
 						{#each orders as order (order.id)}
-							<tr>
+							<tr class:selected={order.selected}>
+								<td class="checkbox-cell" data-label="Select">
+									<input type="checkbox" bind:checked={order.selected} aria-label="Select order {order.id.slice(0, 8)}" />
+								</td>
 								<td class="order-id" data-label="Order ID">
 									<span class="id-badge">#{order.id.slice(0, 8)}</span>
 								</td>
@@ -342,6 +398,61 @@
 
 	.main-content {
 		flex: 1;
+	}
+
+	.actions-bar {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+		padding: 1rem 1.5rem;
+		background: rgba(255, 255, 255, 0.8);
+		backdrop-filter: blur(10px);
+		border-radius: 16px;
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.05);
+	}
+
+	.action-select {
+		padding: 0.6rem 1rem;
+		border-radius: 8px;
+		border: 1px solid #e2e8f0;
+		background: white;
+		font-size: 0.9rem;
+		color: #334155;
+		outline: none;
+		min-width: 150px;
+		font-weight: 500;
+	}
+
+	.btn-secondary {
+		background: #f8fafc;
+		color: #475569;
+		padding: 0.6rem 1.5rem;
+		border-radius: 8px;
+		font-weight: 600;
+		border: 1px solid #e2e8f0;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.btn-secondary:hover:not(:disabled) {
+		background: #e2e8f0;
+		color: #1e293b;
+	}
+
+	.btn-secondary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.checkbox-cell {
+		width: 48px;
+		text-align: center !important;
+	}
+
+	.orders-table tr.selected td {
+		background: #f8fafc;
 	}
 
 	.table-container {
