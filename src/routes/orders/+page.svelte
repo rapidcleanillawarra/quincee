@@ -6,8 +6,7 @@
 
 	let orders = $state([]);
 	let isLoading = $state(true);
-	let overallProfit = $derived(orders.reduce((sum, order) => sum + (order.profit || 0), 0));
-	let completedProfit = $derived(orders.filter(order => order.status?.toLowerCase() === 'completed').reduce((sum, order) => sum + (order.profit || 0), 0));
+
 
 	let selectedAction = $state("");
 	let anySelected = $derived(orders.some(o => o.selected));
@@ -151,18 +150,7 @@
 			<div class="title-row">
 				<h1>Order History</h1>
 			</div>
-			<div class="badges-row">
-				{#if !isLoading && orders.length > 0}
-					<div class="total-profit-badge" class:positive={overallProfit > 0} class:negative={overallProfit < 0} in:fly={{ x: 20, duration: 600, delay: 400, easing: quintOut }}>
-						<span class="label">Total Profit:</span>
-						<span class="value">{formatCurrency(overallProfit)}</span>
-					</div>
-					<div class="total-profit-badge" class:positive={completedProfit > 0} class:negative={completedProfit < 0} in:fly={{ x: 20, duration: 600, delay: 500, easing: quintOut }}>
-						<span class="label">Completed Profit:</span>
-						<span class="value">{formatCurrency(completedProfit)}</span>
-					</div>
-				{/if}
-			</div>
+
 			<p class="subtitle">Manage and track your recent orders</p>
 		</div>
 		<a href="/orders/modify" class="new-order-btn">
@@ -309,62 +297,7 @@
 		flex-wrap: wrap;
 	}
 
-	.badges-row {
-		display: flex;
-		gap: 1rem;
-		margin-top: 1rem;
-		flex-wrap: wrap;
-	}
 
-	.total-profit-badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		background: white;
-		border: 1px solid rgba(226, 232, 240, 0.8);
-		border-radius: 99px;
-		font-size: 0.9rem;
-		font-weight: 600;
-		box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.05);
-		transition: transform 0.2s, box-shadow 0.2s;
-	}
-
-	.total-profit-badge:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 6px 20px -5px rgba(0, 0, 0, 0.08);
-	}
-
-	.total-profit-badge .label {
-		color: #64748b;
-		font-size: 0.75rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		font-weight: 700;
-	}
-
-	.total-profit-badge.positive {
-		border-color: #bbf7d0;
-		background: linear-gradient(to right, #ffffff, #f0fdf4);
-	}
-
-	.total-profit-badge.positive .value {
-		color: #16a34a;
-	}
-
-	.total-profit-badge.negative {
-		border-color: #fecaca;
-		background: linear-gradient(to right, #ffffff, #fef2f2);
-	}
-
-	.total-profit-badge.negative .value {
-		color: #dc2626;
-	}
-
-	.total-profit-badge .value {
-		font-size: 1.1rem;
-		font-weight: 800;
-	}
 
 	.subtitle {
 		color: #64748b;
@@ -762,18 +695,7 @@
 			gap: 0.5rem;
 		}
 
-		.badges-row {
-			flex-direction: column;
-			width: 100%;
-			gap: 0.5rem;
-		}
 
-		.total-profit-badge {
-			width: 100%;
-			justify-content: space-between;
-			box-sizing: border-box;
-			padding: 0.75rem 1rem;
-		}
 		
 		.new-order-btn {
 			width: 100%;
