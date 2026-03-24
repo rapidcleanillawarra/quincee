@@ -525,6 +525,10 @@
 				paymentStatus = 'paid';
 				orderUpdates.payment_status = 'paid';
 				shouldUpdateOrder = true;
+			} else if (newTotalPaid > 0 && newTotalPaid < grandTotal && paymentStatus !== 'partial') {
+				paymentStatus = 'partial';
+				orderUpdates.payment_status = 'partial';
+				shouldUpdateOrder = true;
 			}
 			
 			// Optional: Update order status to completed if balance becomes 0
