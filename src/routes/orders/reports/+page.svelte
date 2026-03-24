@@ -20,6 +20,11 @@ function normalizeStatus(status) {
 	return normalized || 'pending';
 }
 
+function isQuotedUnpaid(order) {
+	const paymentStatus = order?.payment_status || 'unpaid';
+	return paymentStatus === 'unpaid' && normalizeStatus(order?.status) === 'quoted';
+}
+
 	// ── Grand‑total by order status ────────────────────────────────────────────
 	let statusTotals = $derived.by(() => {
 		const map = {};
@@ -40,6 +45,7 @@ let grandTotal = $derived.by(() => orders.reduce((sum, o) => sum + toAmount(o.to
 		for (const order of profitOrders) {
 			const ps = order.payment_status || 'unpaid';
 			const key = ['paid', 'partial', 'unpaid'].includes(ps) ? ps : 'unpaid';
+			if (key === 'unpaid' && isQuotedUnpaid(order)) continue;
 			const capital = (order.quincees_order_items || []).reduce(
 				(s, item) => s + item.quantity * (item.buy_price_at_order ?? 0),
 				0
@@ -56,7 +62,12 @@ let grandTotal = $derived.by(() => orders.reduce((sum, o) => sum + toAmount(o.to
 
 	let totalProfit = $derived(profitByPaymentStatus.reduce((s, r) => s + r.profit, 0));
 
-let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(o.total_amount), 0));
+let totalRevenue = $derived.by(() =>
+	profitOrders.reduce((s, o) => {
+		if (isQuotedUnpaid(o)) return s;
+		return s + toAmount(o.total_amount);
+	}, 0)
+);
 let paidAmountsByOrder = $derived.by(() =>
 	orderPayments.reduce((map, payment) => {
 		const orderId = payment.order_id;
@@ -66,14 +77,18 @@ let paidAmountsByOrder = $derived.by(() =>
 	}, {})
 );
 let totalCollection = $derived.by(() =>
-	profitOrders.reduce((sum, order) => sum + (paidAmountsByOrder[order.id] || 0), 0)
+	profitOrders.reduce((sum, order) => {
+		if (isQuotedUnpaid(order)) return sum;
+		return sum + (paidAmountsByOrder[order.id] || 0);
+	}, 0)
 );
 	let totalCapital = $derived(
-		profitOrders.reduce((s, o) =>
-			s + (o.quincees_order_items || []).reduce(
+		profitOrders.reduce((s, o) => {
+			if (isQuotedUnpaid(o)) return s;
+			return s + (o.quincees_order_items || []).reduce(
 				(si, item) => si + item.quantity * (item.buy_price_at_order ?? 0), 0
-			), 0
-		)
+			);
+		}, 0)
 	);
 
 	// ── Colors ──────────────────────────────────────────────────────────────────
@@ -137,6 +152,7 @@ let totalCollection = $derived.by(() =>
 						id,
 						total_amount,
 						payment_status,
+						status,
 						quincees_order_items (
 							quantity,
 							price_at_order,
@@ -332,7 +348,12 @@ let totalCollection = $derived.by(() =>
 						</thead>
 						<tbody>
 							{#each ['paid','partial','unpaid'] as ps}
-								{@const rowOrders = profitOrders.filter(o => (o.payment_status || 'unpaid') === ps)}
+								{@const rowOrders = profitOrders.filter(o => {
+									const paymentStatus = o.payment_status || 'unpaid';
+									if (paymentStatus !== ps) return false;
+									if (ps === 'unpaid' && isQuotedUnpaid(o)) return false;
+									return true;
+								})}
 								{@const revenue = rowOrders.reduce((s, o) => s + toAmount(o.total_amount), 0)}
 								{@const collection = rowOrders.reduce((s, o) => s + (paidAmountsByOrder[o.id] || 0), 0)}
 								{@const capital = rowOrders.reduce((s, o) =>
