@@ -109,7 +109,7 @@
 
 			if (orderItems && orderItems.length > 0) {
 				const mappedItems = await Promise.all(orderItems.map(async (item) => {
-					// Get latest buy price for each product
+					// Get latest buy price for each product as fallback
 					const { data: priceData } = await supabase
 						.from('quincees_prices')
 						.select('buy_price')
@@ -118,14 +118,16 @@
 						.limit(1)
 						.maybeSingle();
 
+					const finalBuyPrice = item.buy_price_at_order ?? priceData?.buy_price ?? 0;
+
 					return {
 						id: crypto.randomUUID(),
 						product_id: item.product_id,
 						name: item.product?.name || '',
 						quantity: item.quantity,
 						sell_price: item.price_at_order,
-						buy_price: priceData?.buy_price || 0,
-						original_buy_price: priceData?.buy_price || 0,
+						buy_price: finalBuyPrice,
+						original_buy_price: finalBuyPrice,
 						selected: false
 					};
 				}));
@@ -296,7 +298,8 @@
 				order_id: order.id,
 				product_id: item.product_id,
 				quantity: item.quantity,
-				price_at_order: item.sell_price
+				price_at_order: item.sell_price,
+				buy_price_at_order: item.buy_price
 			}));
 
 			const { error: itemsError } = await supabase
@@ -305,26 +308,7 @@
 
 			if (itemsError) throw itemsError;
 
-			// 5. Update Prices (Existing logic)
-			const buyPriceUpdates = validItems
-				.filter(item => item.buy_price !== item.original_buy_price)
-				.map(item => ({
-					product_id: item.product_id,
-					buy_price: item.buy_price,
-					effective_from: new Date().toISOString()
-				}));
-
-			if (buyPriceUpdates.length > 0) {
-				const { error: priceError } = await supabase
-					.from('quincees_prices')
-					.insert(buyPriceUpdates);
-				
-				if (priceError) {
-					console.error('Error updating buy prices:', priceError);
-				}
-			}
-
-			// 6. Update Customer-Specific Sell Prices
+			// 5. Update Customer-Specific Sell Prices
 			const sellPriceUpdates = validItems.map(item => ({
 				customer_id: customerId,
 				product_id: item.product_id,
@@ -418,7 +402,8 @@
 				order_id: newOrder.id,
 				product_id: item.product_id,
 				quantity: item.quantity,
-				price_at_order: item.sell_price
+				price_at_order: item.sell_price,
+				buy_price_at_order: item.buy_price
 			}));
 
 			const { error: itemsError } = await supabase
