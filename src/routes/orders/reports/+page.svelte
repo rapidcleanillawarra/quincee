@@ -56,6 +56,12 @@ let grandTotal = $derived.by(() => orders.reduce((sum, o) => sum + toAmount(o.to
 	let totalProfit = $derived(profitByPaymentStatus.reduce((s, r) => s + r.profit, 0));
 
 let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(o.total_amount), 0));
+let totalCollection = $derived.by(() =>
+	profitOrders.reduce((s, o) => {
+		const paymentStatus = o.payment_status || 'unpaid';
+		return paymentStatus === 'unpaid' ? s : s + toAmount(o.total_amount);
+	}, 0)
+);
 	let totalCapital = $derived(
 		profitOrders.reduce((s, o) =>
 			s + (o.quincees_order_items || []).reduce(
@@ -229,9 +235,15 @@ let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(
 			<div class="report-card" in:fly={{ y: 20, duration: 700, delay: 120, easing: quintOut }}>
 				<div class="card-header">
 					<span class="card-label">Profit by Payment Status</span>
-					<span class="card-total" class:profit-positive={totalProfit >= 0} class:profit-negative={totalProfit < 0}>
-						{formatCurrency(totalProfit)}
-					</span>
+					<div class="card-header-right">
+						<div class="collection-total">
+							<span class="collection-label">Collection</span>
+							<span class="collection-amount">{formatCurrency(totalCollection)}</span>
+						</div>
+						<span class="card-total" class:profit-positive={totalProfit >= 0} class:profit-negative={totalProfit < 0}>
+							{formatCurrency(totalProfit)}
+						</span>
+					</div>
 				</div>
 
 				<div class="chart-layout">
@@ -287,6 +299,12 @@ let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(
 							</svg>
 							Profit = Revenue − Cost (buy price at order)
 						</div>
+						<div class="profit-info-note">
+							<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+								<circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/>
+							</svg>
+							Collection excludes unpaid order totals
+						</div>
 					</div>
 				</div>
 
@@ -332,6 +350,13 @@ let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(
 								<td class="num muted"><strong>{formatCurrency(totalCapital)}</strong></td>
 								<td class="num" class:pos={totalProfit >= 0} class:neg={totalProfit < 0}><strong>{formatCurrency(totalProfit)}</strong></td>
 								<td class="num muted"><strong>{profitOrders.length}</strong></td>
+							</tr>
+							<tr>
+								<td><strong>Collection</strong></td>
+								<td class="num"><strong>{formatCurrency(totalCollection)}</strong></td>
+								<td class="num muted">—</td>
+								<td class="num muted">—</td>
+								<td class="num muted">—</td>
 							</tr>
 						</tfoot>
 					</table>
@@ -432,6 +457,29 @@ let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(
 		font-weight: 800;
 		color: #0f172a;
 		letter-spacing: -0.02em;
+	}
+	.card-header-right {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+	.collection-total {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		line-height: 1.1;
+	}
+	.collection-label {
+		font-size: 0.68rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #64748b;
+	}
+	.collection-amount {
+		font-size: 0.95rem;
+		font-weight: 700;
+		color: #0f172a;
 	}
 
 	.profit-positive { color: #16a34a; }
@@ -669,6 +717,7 @@ let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(
 		.page-header { padding: 1.25rem; }
 		.page-header h1 { font-size: 1.75rem; }
 		.card-header { padding: 1.25rem 1.5rem; }
+		.card-header-right { flex-direction: column; align-items: flex-end; gap: 0.35rem; }
 		.card-total { font-size: 1.35rem; }
 		.chart-layout { flex-direction: column; padding: 1.5rem 1.25rem; gap: 2rem; }
 		.pie-svg { width: 220px; height: 220px; }
