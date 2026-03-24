@@ -153,13 +153,21 @@
 
 			<p class="subtitle">Manage and track your recent orders</p>
 		</div>
-		<a href="/orders/modify" class="new-order-btn">
-			<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
-				<line x1="12" y1="5" x2="12" y2="19" />
-				<line x1="5" y1="12" x2="19" y2="12" />
-			</svg>
-			New Order
-		</a>
+		<div class="header-actions">
+			<a href="/orders/reports" class="reports-btn">
+				<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+					<path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" />
+				</svg>
+				Reports
+			</a>
+			<a href="/orders/modify" class="new-order-btn">
+				<svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none">
+					<line x1="12" y1="5" x2="12" y2="19" />
+					<line x1="5" y1="12" x2="19" y2="12" />
+				</svg>
+				New Order
+			</a>
+		</div>
 	</header>
 
 	<main class="main-content">
@@ -304,6 +312,35 @@
 		margin: 0.5rem 0 0 0;
 		font-size: 1rem;
 		font-weight: 500;
+	}
+
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-shrink: 0;
+	}
+
+	.reports-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		background: rgba(255, 255, 255, 0.8);
+		color: #475569;
+		padding: 0.875rem 1.5rem;
+		border-radius: 14px;
+		font-weight: 600;
+		text-decoration: none;
+		border: 1px solid #e2e8f0;
+		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		white-space: nowrap;
+	}
+
+	.reports-btn:hover {
+		background: #f1f5f9;
+		color: #1e293b;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.1);
 	}
 
 	.new-order-btn {
@@ -698,6 +735,18 @@
 
 		
 		.new-order-btn {
+			width: 100%;
+			justify-content: center;
+			padding: 1rem;
+			box-sizing: border-box;
+		}
+
+		.header-actions {
+			width: 100%;
+			flex-direction: column;
+		}
+
+		.reports-btn {
 			width: 100%;
 			justify-content: center;
 			padding: 1rem;
