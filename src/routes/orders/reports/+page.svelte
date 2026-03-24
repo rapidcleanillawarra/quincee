@@ -7,6 +7,7 @@
 
 	let orders = $state([]);
 	let profitOrders = $state([]);
+	let orderPayments = $state([]);
 	let isLoading = $state(true);
 
 function toAmount(value) {
@@ -56,11 +57,16 @@ let grandTotal = $derived.by(() => orders.reduce((sum, o) => sum + toAmount(o.to
 	let totalProfit = $derived(profitByPaymentStatus.reduce((s, r) => s + r.profit, 0));
 
 let totalRevenue = $derived.by(() => profitOrders.reduce((s, o) => s + toAmount(o.total_amount), 0));
+let paidAmountsByOrder = $derived.by(() =>
+	orderPayments.reduce((map, payment) => {
+		const orderId = payment.order_id;
+		if (!orderId) return map;
+		map[orderId] = (map[orderId] || 0) + toAmount(payment.amount);
+		return map;
+	}, {})
+);
 let totalCollection = $derived.by(() =>
-	profitOrders.reduce((s, o) => {
-		const paymentStatus = o.payment_status || 'unpaid';
-		return paymentStatus === 'unpaid' ? s : s + toAmount(o.total_amount);
-	}, 0)
+	profitOrders.reduce((sum, order) => sum + (paidAmountsByOrder[order.id] || 0), 0)
 );
 	let totalCapital = $derived(
 		profitOrders.reduce((s, o) =>
@@ -123,7 +129,7 @@ let totalCollection = $derived.by(() =>
 	async function fetchData() {
 		isLoading = true;
 		try {
-			const [ordersRes, profitRes] = await Promise.all([
+			const [ordersRes, profitRes, paymentsRes] = await Promise.all([
 				supabase.from('quincees_orders').select('id, total_amount, status'),
 				supabase
 					.from('quincees_orders')
@@ -137,11 +143,14 @@ let totalCollection = $derived.by(() =>
 							buy_price_at_order
 						)
 					`),
+				supabase.from('quincees_order_payments').select('order_id, amount'),
 			]);
 			if (ordersRes.error) throw ordersRes.error;
 			if (profitRes.error) throw profitRes.error;
+			if (paymentsRes.error) throw paymentsRes.error;
 			orders = ordersRes.data || [];
 			profitOrders = profitRes.data || [];
+			orderPayments = paymentsRes?.data || [];
 		} catch (err) {
 			console.error('Error fetching report data:', err);
 		} finally {
@@ -315,6 +324,7 @@ let totalCollection = $derived.by(() =>
 							<tr>
 								<th>Payment Status</th>
 								<th class="num">Revenue</th>
+								<th class="num">Collection</th>
 								<th class="num">Capital</th>
 								<th class="num">Profit</th>
 								<th class="num">Orders</th>
@@ -324,6 +334,7 @@ let totalCollection = $derived.by(() =>
 							{#each ['paid','partial','unpaid'] as ps}
 								{@const rowOrders = profitOrders.filter(o => (o.payment_status || 'unpaid') === ps)}
 								{@const revenue = rowOrders.reduce((s, o) => s + toAmount(o.total_amount), 0)}
+								{@const collection = rowOrders.reduce((s, o) => s + (paidAmountsByOrder[o.id] || 0), 0)}
 								{@const capital = rowOrders.reduce((s, o) =>
 									s + (o.quincees_order_items || []).reduce(
 										(si, item) => si + item.quantity * (item.buy_price_at_order ?? 0), 0
@@ -337,6 +348,7 @@ let totalCollection = $derived.by(() =>
 										</span>
 									</td>
 									<td class="num">{formatCurrency(revenue)}</td>
+									<td class="num">{formatCurrency(collection)}</td>
 									<td class="num muted">{formatCurrency(capital)}</td>
 									<td class="num" class:pos={profit >= 0} class:neg={profit < 0}>{formatCurrency(profit)}</td>
 									<td class="num muted">{rowOrders.length}</td>
@@ -347,12 +359,14 @@ let totalCollection = $derived.by(() =>
 							<tr>
 								<td><strong>Total</strong></td>
 								<td class="num"><strong>{formatCurrency(totalRevenue)}</strong></td>
+								<td class="num"><strong>{formatCurrency(totalCollection)}</strong></td>
 								<td class="num muted"><strong>{formatCurrency(totalCapital)}</strong></td>
 								<td class="num" class:pos={totalProfit >= 0} class:neg={totalProfit < 0}><strong>{formatCurrency(totalProfit)}</strong></td>
 								<td class="num muted"><strong>{profitOrders.length}</strong></td>
 							</tr>
 							<tr>
 								<td><strong>Collection</strong></td>
+								<td class="num muted">—</td>
 								<td class="num"><strong>{formatCurrency(totalCollection)}</strong></td>
 								<td class="num muted">—</td>
 								<td class="num muted">—</td>
