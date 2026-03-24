@@ -23,7 +23,7 @@
 	let isSaving = $state(false);
 	let orderId = $state(null);
 	let isLoading = $state(false);
-	let orderStatus = $state("quoted"); // quoted, unpaid, completed
+	let orderStatus = $state("quoted"); // quoted, delivered, completed
 	let paymentStatus = $state("unpaid");
 
 	// Derived state for totals
@@ -103,7 +103,7 @@
 			orderId = order.id;
 			selectedCustomerId = order.customer_id;
 			selectedCustomerName = order.customer_username;
-			orderStatus = order.status || 'quoted';
+			orderStatus = order.status === 'unpaid' ? 'delivered' : (order.status || 'quoted');
 			paymentStatus = order.payment_status || 'unpaid';
 
 			// Fetch items for this order
@@ -630,12 +630,12 @@
 					Quoted
 				</button>
 				<button 
-					class="status-btn status-unpaid" 
-					class:active={orderStatus === 'unpaid'} 
-					onclick={() => orderStatus = 'unpaid'}
+					class="status-btn status-delivered" 
+					class:active={orderStatus === 'delivered'} 
+					onclick={() => orderStatus = 'delivered'}
 				>
 					<span class="dot"></span>
-					Unpaid
+					Delivered
 				</button>
 				<button 
 					class="status-btn status-completed" 
@@ -842,13 +842,13 @@
 		opacity: 1;
 	}
 
-	/* Unpaid - Amber */
-	.status-unpaid.active {
+	/* Delivered - Amber */
+	.status-delivered.active {
 		background: #fffbeb;
 		border-color: #f59e0b;
 		color: #92400e;
 	}
-	.status-unpaid.active .dot {
+	.status-delivered.active .dot {
 		background: #f59e0b;
 		opacity: 1;
 	}

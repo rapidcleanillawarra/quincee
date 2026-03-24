@@ -109,7 +109,8 @@
 	function getStatusClass(status) {
 		switch (status?.toLowerCase()) {
 			case 'quoted': return 'status-quoted';
-			case 'unpaid': return 'status-unpaid';
+			case 'unpaid': return 'status-delivered';
+			case 'delivered': return 'status-delivered';
 			case 'completed': return 'status-completed';
 			case 'pending': return 'status-pending';
 			case 'cancelled': return 'status-cancelled';
@@ -234,7 +235,7 @@
 								</td>
 								<td data-label="Status">
 									<span class="status-pill {getStatusClass(order.status)}">
-										{order.status || 'Pending'}
+										{order.status?.toLowerCase() === 'unpaid' ? 'Delivered' : (order.status || 'Pending')}
 									</span>
 								</td>
 								<td class="text-right actions-cell" data-label="Actions">
@@ -574,7 +575,7 @@
 		border: 1px solid #bfdbfe;
 	}
 
-	.status-unpaid {
+	.status-delivered {
 		background: #ffedd5;
 		color: #9a3412;
 		border: 1px solid #fed7aa;
