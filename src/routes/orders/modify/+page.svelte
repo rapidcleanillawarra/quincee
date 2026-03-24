@@ -36,6 +36,16 @@
 
 	let totalProfit = $derived(grandTotal - totalCapital);
 
+	// Payments state
+	let payments = $state([]);
+	let totalPaid = $derived(payments.reduce((sum, p) => sum + Number(p.amount), 0));
+	let remainingBalance = $derived(Math.max(0, grandTotal - totalPaid));
+	
+	let newPaymentAmount = $state('');
+	let newPaymentMethod = $state('cash');
+	let newPaymentNotes = $state('');
+	let isSavingPayment = $state(false);
+
 	function addItem() {
 		const newItem = {
 			id: crypto.randomUUID(),
@@ -121,6 +131,18 @@
 				}));
 
 				items = mappedItems;
+			}
+
+			// Fetch payments
+			const { data: orderPayments, error: paymentsError } = await supabase
+				.from('quincees_order_payments')
+				.select('*')
+				.eq('order_id', id)
+				.order('payment_date', { ascending: false });
+
+			if (paymentsError) throw paymentsError;
+			if (orderPayments) {
+				payments = orderPayments;
 			}
 		} catch (error) {
 			console.error('Error loading order:', error);
@@ -439,6 +461,78 @@
 			isSaving = false;
 		}
 	}
+	async function handleDeletePayment(paymentId) {
+		if (!confirm('Are you sure you want to delete this payment record?')) return;
+		
+		isSavingPayment = true;
+		try {
+			const { error } = await supabase
+				.from('quincees_order_payments')
+				.delete()
+				.eq('id', paymentId);
+				
+			if (error) throw error;
+			
+			payments = payments.filter(p => p.id !== paymentId);
+		} catch (error) {
+			console.error('Error deleting payment:', error);
+			alert('Failed to delete payment: ' + error.message);
+		} finally {
+			isSavingPayment = false;
+		}
+	}
+
+	async function handleAddPayment() {
+		if (!orderId) {
+			alert('Please save the order first before adding payments.');
+			return;
+		}
+		
+		const amount = parseFloat(newPaymentAmount);
+		if (isNaN(amount) || amount <= 0) {
+			alert('Please enter a valid payment amount.');
+			return;
+		}
+
+		if (amount > remainingBalance) {
+			if (!confirm(`The payment amount ($${amount}) is greater than the remaining balance ($${remainingBalance}). Are you sure?`)) {
+				return;
+			}
+		}
+
+		isSavingPayment = true;
+		try {
+			const { data, error } = await supabase
+				.from('quincees_order_payments')
+				.insert({
+					order_id: orderId,
+					amount: amount,
+					payment_method: newPaymentMethod,
+					notes: newPaymentNotes
+				})
+				.select()
+				.single();
+
+			if (error) throw error;
+			
+			payments = [data, ...payments];
+			newPaymentAmount = '';
+			newPaymentNotes = '';
+			
+			// Optional: Update order status to completed if balance becomes 0
+			if (remainingBalance <= 0 && orderStatus !== 'completed') {
+				if (confirm('The balance is now fully paid. Change order status to completed?')) {
+					orderStatus = 'completed';
+					await handleSave();
+				}
+			}
+		} catch (error) {
+			console.error('Error adding payment:', error);
+			alert('Failed to add payment: ' + error.message);
+		} finally {
+			isSavingPayment = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -574,11 +668,71 @@
 				</svg>
 				Add Item
 			</button>
+
+			<!-- Payments Section -->
+			{#if orderId}
+				<div class="payments-section">
+					<h2>Payment History</h2>
+					<div class="payments-form">
+						<div class="form-group">
+							<label for="payment-amount">Amount</label>
+							<div class="input-with-icon">
+								<span class="currency-symbol">$</span>
+								<input type="number" id="payment-amount" bind:value={newPaymentAmount} step="0.01" min="0" placeholder="0.00" disabled={isSavingPayment} />
+							</div>
+						</div>
+						<div class="form-group">
+							<label for="payment-method">Method</label>
+							<select id="payment-method" bind:value={newPaymentMethod} disabled={isSavingPayment}>
+								<option value="cash">Cash</option>
+								<option value="card">Card</option>
+								<option value="bank_transfer">Bank Transfer</option>
+								<option value="cheque">Cheque</option>
+								<option value="other">Other</option>
+							</select>
+						</div>
+						<div class="form-group notes-group">
+							<label for="payment-notes">Notes (Optional)</label>
+							<input type="text" id="payment-notes" bind:value={newPaymentNotes} placeholder="Ref number, etc." disabled={isSavingPayment} />
+						</div>
+						<button class="add-payment-btn" onclick={handleAddPayment} disabled={isSavingPayment || !newPaymentAmount}>
+							{isSavingPayment ? 'Adding...' : 'Add Payment'}
+						</button>
+					</div>
+					
+					{#if payments.length > 0}
+						<div class="payments-list">
+							{#each payments as payment}
+								<div class="payment-item">
+									<div class="payment-info">
+										<span class="payment-amount">{formatCurrency(payment.amount)}</span>
+										<span class="payment-method">{payment.payment_method.replace('_', ' ')}</span>
+										{#if payment.notes}
+											<span class="payment-notes">- {payment.notes}</span>
+										{/if}
+									</div>
+									<div class="payment-actions">
+										<span class="payment-date">{new Date(payment.payment_date).toLocaleDateString()}</span>
+										<button class="delete-payment-btn" onclick={() => handleDeletePayment(payment.id)} title="Delete Payment">
+											<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+												<polyline points="3 6 5 6 21 6"></polyline>
+												<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+											</svg>
+										</button>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="no-payments">No payments recorded yet.</p>
+					{/if}
+				</div>
+			{/if}
 		{/if}
 	</main>
 
 	{#if !isLoading}
-		<OrderSummary {items} {grandTotal} {totalCapital} {totalProfit} {handleSave} disabled={isSaving} />
+		<OrderSummary {items} {grandTotal} {totalCapital} {totalProfit} {totalPaid} {remainingBalance} {handleSave} disabled={isSaving} />
 	{/if}
 </div>
 
@@ -883,5 +1037,184 @@
 		.mobile-only {
 			display: none;
 		}
+	}
+
+	/* Payment Section Styles */
+	.payments-section {
+		background: #fff;
+		border-radius: 12px;
+		border: 1px solid #e2e8f0;
+		padding: 1.5rem;
+		margin-top: 1rem;
+	}
+
+	.payments-section h2 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: #1e293b;
+		margin-top: 0;
+		margin-bottom: 1rem;
+	}
+
+	.payments-form {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		align-items: flex-end;
+		margin-bottom: 1.5rem;
+		padding-bottom: 1.5rem;
+		border-bottom: 1px solid #e2e8f0;
+	}
+
+	.form-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.form-group label {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #475569;
+	}
+
+	.input-with-icon {
+		position: relative;
+	}
+
+	.currency-symbol {
+		position: absolute;
+		left: 0.75rem;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #94a3b8;
+		font-weight: 500;
+	}
+
+	.input-with-icon input {
+		padding-left: 1.75rem;
+		width: 120px;
+	}
+
+	.payments-form input, .payments-form select {
+		padding: 0.5rem 0.75rem;
+		border: 1px solid #cbd5e1;
+		border-radius: 8px;
+		font-size: 0.95rem;
+		outline: none;
+		transition: border-color 0.2s;
+	}
+
+	.payments-form input:focus, .payments-form select:focus {
+		border-color: #3b82f6;
+	}
+
+	.notes-group {
+		flex: 1;
+		min-width: 200px;
+	}
+
+	.notes-group input {
+		width: 100%;
+	}
+
+	.add-payment-btn {
+		background: #10b981;
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 8px;
+		font-weight: 600;
+		cursor: pointer;
+		height: 38px;
+		transition: background 0.2s;
+	}
+
+	.add-payment-btn:hover:not(:disabled) {
+		background: #059669;
+	}
+	
+	.add-payment-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.payments-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.payment-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.75rem 1rem;
+		background: #f8fafc;
+		border-radius: 8px;
+		border: 1px solid #f1f5f9;
+	}
+
+	.payment-info {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.payment-amount {
+		font-weight: 700;
+		color: #0f172a;
+		font-size: 1.1rem;
+	}
+
+	.payment-method {
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: #64748b;
+		text-transform: capitalize;
+		background: #e2e8f0;
+		padding: 0.2rem 0.5rem;
+		border-radius: 4px;
+	}
+
+	.payment-notes {
+		font-size: 0.9rem;
+		color: #64748b;
+		font-style: italic;
+	}
+
+	.payment-actions {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.payment-date {
+		font-size: 0.85rem;
+		color: #94a3b8;
+	}
+
+	.delete-payment-btn {
+		background: none;
+		border: none;
+		color: #ef4444;
+		cursor: pointer;
+		padding: 0.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 4px;
+		transition: background 0.2s;
+	}
+
+	.delete-payment-btn:hover {
+		background: #fee2e2;
+	}
+
+	.no-payments {
+		color: #94a3b8;
+		font-style: italic;
+		text-align: center;
+		padding: 1rem 0;
 	}
 </style>

@@ -3,7 +3,7 @@
 	import { quintOut } from 'svelte/easing';
 	import { formatCurrency } from '../utils/format';
 
-	let { items, grandTotal, totalCapital, totalProfit, handleSave, disabled = false } = $props();
+	let { items, grandTotal, totalCapital, totalProfit, totalPaid = 0, remainingBalance = 0, handleSave, disabled = false } = $props();
 </script>
 
 <footer class="summary-footer" in:fly={{ y: 20, duration: 800, easing: quintOut }}>
@@ -16,6 +16,14 @@
 			<div class="summary-info-group">
 				<span class="summary-small-label">Profit</span>
 				<span class="summary-small-value profit-highlight">{formatCurrency(totalProfit)}</span>
+			</div>
+			<div class="summary-info-group">
+				<span class="summary-small-label" style="color: #60a5fa;">Total Paid</span>
+				<span class="summary-small-value" style="color: #bfdbfe;">{formatCurrency(totalPaid)}</span>
+			</div>
+			<div class="summary-info-group">
+				<span class="summary-small-label" style="color: #fbbf24;">Balance</span>
+				<span class="summary-small-value" style="color: #fde68a;">{formatCurrency(remainingBalance)}</span>
 			</div>
 		</div>
 		<div class="summary-main">
