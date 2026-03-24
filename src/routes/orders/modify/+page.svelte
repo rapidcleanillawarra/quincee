@@ -46,6 +46,14 @@
 	let newPaymentNotes = $state('');
 	let isSavingPayment = $state(false);
 
+	let prevBalance = 0;
+	$effect(() => {
+		if (remainingBalance !== prevBalance) {
+			newPaymentAmount = remainingBalance > 0 ? Number(remainingBalance.toFixed(2)) : '';
+			prevBalance = remainingBalance;
+		}
+	});
+
 	function addItem() {
 		const newItem = {
 			id: crypto.randomUUID(),
@@ -662,8 +670,7 @@
 						<div class="form-group">
 							<label for="payment-amount">Amount</label>
 							<div class="input-with-icon">
-								<span class="currency-symbol">$</span>
-								<input type="number" id="payment-amount" bind:value={newPaymentAmount} step="0.01" min="0" placeholder="0.00" disabled={isSavingPayment} />
+								<input type="number" id="payment-amount" bind:value={newPaymentAmount} step="0.01" min="0" placeholder={remainingBalance.toFixed(2)} disabled={isSavingPayment} />
 							</div>
 						</div>
 						<div class="form-group">
@@ -1067,17 +1074,7 @@
 		position: relative;
 	}
 
-	.currency-symbol {
-		position: absolute;
-		left: 0.75rem;
-		top: 50%;
-		transform: translateY(-50%);
-		color: #94a3b8;
-		font-weight: 500;
-	}
-
 	.input-with-icon input {
-		padding-left: 1.75rem;
 		width: 120px;
 	}
 
