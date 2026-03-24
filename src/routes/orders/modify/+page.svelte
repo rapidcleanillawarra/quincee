@@ -24,6 +24,7 @@
 	let orderId = $state(null);
 	let isLoading = $state(false);
 	let orderStatus = $state("quoted"); // quoted, unpaid, completed
+	let paymentStatus = $state("unpaid");
 
 	// Derived state for totals
 	let grandTotal = $derived(
@@ -103,6 +104,7 @@
 			selectedCustomerId = order.customer_id;
 			selectedCustomerName = order.customer_username;
 			orderStatus = order.status || 'quoted';
+			paymentStatus = order.payment_status || 'unpaid';
 
 			// Fetch items for this order
 			const { data: orderItems, error: itemsError } = await supabase
@@ -269,7 +271,8 @@
 						customer_id: customerId,
 						customer_username: selectedCustomerName,
 						total_amount: grandTotal,
-						status: orderStatus
+						status: orderStatus,
+						payment_status: paymentStatus
 					})
 					.eq('id', orderId)
 					.select()
@@ -292,7 +295,8 @@
 						customer_id: customerId,
 						customer_username: selectedCustomerName, 
 						total_amount: grandTotal,
-						status: orderStatus
+						status: orderStatus,
+						payment_status: paymentStatus
 					})
 					.select()
 					.single();
@@ -398,7 +402,8 @@
 					customer_id: customerId,
 					customer_username: selectedCustomerName,
 					total_amount: selectedItems.reduce((sum, item) => sum + (item.quantity * item.sell_price), 0),
-					status: 'quoted'
+					status: 'quoted',
+					payment_status: 'unpaid'
 				})
 				.select()
 				.single();
@@ -512,12 +517,31 @@
 			newPaymentAmount = '';
 			newPaymentNotes = '';
 			
+			const newTotalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+			let orderUpdates = {};
+			let shouldUpdateOrder = false;
+
+			if (newTotalPaid >= grandTotal && paymentStatus !== 'paid') {
+				paymentStatus = 'paid';
+				orderUpdates.payment_status = 'paid';
+				shouldUpdateOrder = true;
+			}
+			
 			// Optional: Update order status to completed if balance becomes 0
-			if (remainingBalance <= 0 && orderStatus !== 'completed') {
+			if (newTotalPaid >= grandTotal && orderStatus !== 'completed') {
 				if (confirm('The balance is now fully paid. Change order status to completed?')) {
 					orderStatus = 'completed';
-					await handleSave();
+					orderUpdates.status = 'completed';
+					shouldUpdateOrder = true;
 				}
+			}
+
+			if (shouldUpdateOrder) {
+				const { error: updateError } = await supabase
+					.from('quincees_orders')
+					.update(orderUpdates)
+					.eq('id', orderId);
+				if (updateError) console.error('Failed to update order:', updateError);
 			}
 		} catch (error) {
 			console.error('Error adding payment:', error);
