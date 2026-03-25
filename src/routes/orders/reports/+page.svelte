@@ -82,6 +82,17 @@ let totalCollection = $derived.by(() =>
 		return sum + (paidAmountsByOrder[order.id] || 0);
 	}, 0)
 );
+let totalToCollect = $derived.by(() =>
+	profitOrders.reduce((sum, order) => {
+		if (isQuotedUnpaid(order)) return sum;
+		const paymentStatus = order.payment_status || 'unpaid';
+		const totalAmount = toAmount(order.total_amount);
+		const paidAmount = toAmount(paidAmountsByOrder[order.id] || 0);
+		if (paymentStatus === 'unpaid') return sum + totalAmount;
+		if (paymentStatus === 'partial') return sum + Math.max(totalAmount - paidAmount, 0);
+		return sum;
+	}, 0)
+);
 	let totalCapital = $derived(
 		profitOrders.reduce((s, o) => {
 			if (isQuotedUnpaid(o)) return s;
@@ -261,9 +272,15 @@ let totalCollection = $derived.by(() =>
 				<div class="card-header">
 					<span class="card-label">Profit by Payment Status</span>
 					<div class="card-header-right">
-						<div class="collection-total">
-							<span class="collection-label">Collection</span>
-							<span class="collection-amount">{formatCurrency(totalCollection)}</span>
+						<div class="collection-metrics">
+							<div class="collection-total">
+								<span class="collection-label">Collection</span>
+								<span class="collection-amount">{formatCurrency(totalCollection)}</span>
+							</div>
+							<div class="collection-total">
+								<span class="collection-label">To Collect</span>
+								<span class="collection-amount">{formatCurrency(totalToCollect)}</span>
+							</div>
 						</div>
 						<span class="card-total" class:profit-positive={totalProfit >= 0} class:profit-negative={totalProfit < 0}>
 							{formatCurrency(totalProfit)}
@@ -497,6 +514,11 @@ let totalCollection = $derived.by(() =>
 		display: flex;
 		align-items: center;
 		gap: 1rem;
+	}
+	.collection-metrics {
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
 	}
 	.collection-total {
 		display: flex;
@@ -753,6 +775,7 @@ let totalCollection = $derived.by(() =>
 		.page-header h1 { font-size: 1.75rem; }
 		.card-header { padding: 1.25rem 1.5rem; }
 		.card-header-right { flex-direction: column; align-items: flex-end; gap: 0.35rem; }
+		.collection-metrics { gap: 0.6rem; }
 		.card-total { font-size: 1.35rem; }
 		.chart-layout { flex-direction: column; padding: 1.5rem 1.25rem; gap: 2rem; }
 		.pie-svg { width: 220px; height: 220px; }
