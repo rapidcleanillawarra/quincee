@@ -10,11 +10,12 @@
 
 	let modalItems = $state([]);
 
-	function formatPriceFromBuy(buyPrice) {
+	function formatPriceFromEffectiveSell(sellPrice, buyPrice) {
 		const buy = Number(buyPrice) || 0;
-		const sell = buy > 0 ? buy + 15 : 0;
-		if (sell <= 0) return '—';
-		return `₱${Number(sell).toLocaleString('en-PH')} per kilo`;
+		const storedSell = sellPrice != null && sellPrice !== '' ? Number(sellPrice) : null;
+		const effective = storedSell != null && Number.isFinite(storedSell) ? storedSell : (buy > 0 ? buy + 15 : 0);
+		if (effective <= 0) return '—';
+		return `₱${Number(effective).toLocaleString('en-PH')} per kilo`;
 	}
 
 	function latestPriceRecord(priceRows) {
@@ -34,7 +35,7 @@
 				.select(`
 					id,
 					name,
-					quincees_prices(buy_price, display_on_print, effective_from, created_at)
+					quincees_prices(buy_price, sell_price, display_on_print, effective_from, created_at)
 				`)
 				.order('name');
 
@@ -44,11 +45,12 @@
 				const latest = latestPriceRecord(p.quincees_prices);
 				if (latest?.display_on_print === false) return [];
 				const buy = latest?.buy_price ?? 0;
+				const sell = latest?.sell_price ?? null;
 				return [
 					{
 						id: p.id,
 						name: p.name,
-						price: formatPriceFromBuy(buy)
+						price: formatPriceFromEffectiveSell(sell, buy)
 					}
 				];
 			});

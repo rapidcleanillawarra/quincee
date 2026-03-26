@@ -15,6 +15,7 @@
 	let formBuyPrice = $state('');
 	let formSellPrice = $state('');
 	let formDisplayOnPrint = $state(true);
+	let inlineEditingId = $state(null);
 
 	let filteredRows = $derived(
 		rows.filter((r) => {
@@ -112,6 +113,18 @@
 		isModalOpen = true;
 	}
 
+	function startInlineEdit(row) {
+		inlineEditingId = row.id;
+		formBuyPrice = row.buy_price > 0 ? String(row.buy_price) : '';
+		formSellPrice =
+			row.sell_price != null && row.sell_price > 0 ? String(row.sell_price) : '';
+		formDisplayOnPrint = row.display_on_print !== false;
+	}
+
+	function cancelInlineEdit() {
+		inlineEditingId = null;
+	}
+
 	function parseBuyInput() {
 		const raw = String(formBuyPrice).replace(/,/g, '').trim();
 		if (raw === '') return null;
@@ -180,6 +193,55 @@
 			await fetchPrices();
 			isModalOpen = false;
 			editing = null;
+		} catch (e) {
+			console.error('Error saving price:', e);
+			alert('Failed to save price: ' + (e.message || String(e)));
+		} finally {
+			isSaving = false;
+		}
+	}
+
+	async function handleInlineSave(row) {
+		const buy = parseBuyInput();
+		const sell = parseSellInput();
+
+		if (row == null) return;
+		if (buy == null || Number.isNaN(buy)) {
+			alert('Enter a valid buy price (number).');
+			return;
+		}
+		if (buy < 0) {
+			alert('Buy price cannot be negative.');
+			return;
+		}
+		if (Number.isNaN(sell)) {
+			alert('Enter a valid sell price (number), or leave it blank.');
+			return;
+		}
+		if (sell != null && sell < 0) {
+			alert('Sell price cannot be negative.');
+			return;
+		}
+
+		if (pricesUnchanged(buy, sell, formDisplayOnPrint, row)) {
+			inlineEditingId = null;
+			return;
+		}
+
+		isSaving = true;
+		try {
+			const { error } = await supabase.from('quincees_prices').insert({
+				product_id: row.id,
+				buy_price: buy,
+				sell_price: sell,
+				display_on_print: formDisplayOnPrint,
+				effective_from: new Date().toISOString()
+			});
+
+			if (error) throw error;
+
+			await fetchPrices();
+			inlineEditingId = null;
 		} catch (e) {
 			console.error('Error saving price:', e);
 			alert('Failed to save price: ' + (e.message || String(e)));
@@ -260,22 +322,84 @@
 										<span class="text-muted">—</span>
 									{/if}
 								</td>
-								<td class="text-right mono" data-label="Buy / kilo">{formatMoney(row.buy_price)}</td>
-								<td class="text-right mono sell-cell" data-label="Sell / kilo">
-									<span>{formatMoney(effectiveSell(row))}</span>
-									{#if sellUsesDefaultMarkup(row)}
-										<span class="sell-hint" title="No sell stored; using buy + ₱{RETAIL_MARKUP}">default</span>
+								<td class="text-right mono" data-label="Buy / kilo">
+									{#if inlineEditingId === row.id}
+										<input
+											id={'buy-price-' + row.id}
+											type="text"
+											inputmode="decimal"
+											bind:value={formBuyPrice}
+											placeholder="0"
+											class="price-input"
+											autocomplete="off"
+										/>
+									{:else}
+										{formatMoney(row.buy_price)}
 									{/if}
 								</td>
-								<td class="text-center" data-label="On print sheet">
-									{#if row.display_on_print !== false}
-										<span class="print-badge yes" title="Shown on print price sheet">Yes</span>
+
+								<td class="text-right mono sell-cell" data-label="Sell / kilo">
+									{#if inlineEditingId === row.id}
+										<input
+											id={'sell-price-' + row.id}
+											type="text"
+											inputmode="decimal"
+											bind:value={formSellPrice}
+											placeholder="Optional"
+											class="price-input"
+											autocomplete="off"
+										/>
 									{:else}
-										<span class="print-badge no" title="Hidden from print price sheet">No</span>
+										<span>{formatMoney(effectiveSell(row))}</span>
+										{#if sellUsesDefaultMarkup(row)}
+											<span class="sell-hint" title="No sell stored; using buy + ₱{RETAIL_MARKUP}">default</span>
+										{/if}
+									{/if}
+								</td>
+
+								<td class="text-center col-print" data-label="On print sheet">
+									{#if inlineEditingId === row.id}
+										<label class="checkbox-label">
+											<input
+												type="checkbox"
+												checked={formDisplayOnPrint}
+												onchange={(e) => (formDisplayOnPrint = e.currentTarget.checked)}
+											/>
+											<span class="sr-only">Show on printed price sheet</span>
+										</label>
+									{:else}
+										{#if row.display_on_print !== false}
+											<span class="print-badge yes" title="Shown on print price sheet">Yes</span>
+										{:else}
+											<span class="print-badge no" title="Hidden from print price sheet">No</span>
+										{/if}
 									{/if}
 								</td>
 								<td class="text-right actions-cell" data-label="Actions">
-									<button type="button" class="edit-btn" onclick={() => openEdit(row)}>Edit prices</button>
+									{#if inlineEditingId === row.id}
+										<div class="inline-actions">
+											<button
+												type="button"
+												class="btn-primary"
+												onclick={() => handleInlineSave(row)}
+												disabled={isSaving}
+											>
+												{isSaving ? 'Saving…' : 'Save'}
+											</button>
+											<button
+												type="button"
+												class="btn-secondary"
+												onclick={cancelInlineEdit}
+												disabled={isSaving}
+											>
+												Cancel
+											</button>
+										</div>
+									{:else}
+										<button type="button" class="edit-btn" onclick={() => startInlineEdit(row)}>
+											Edit
+										</button>
+									{/if}
 								</td>
 							</tr>
 						{/each}
@@ -595,6 +719,26 @@
 	.print-badge.no {
 		color: #991b1b;
 		background: #fee2e2;
+	}
+
+	.inline-actions {
+		display: flex;
+		gap: 0.6rem;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+	}
+
+	/* Keep checkbox input accessible, but we don't want extra text in-table. */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
 	}
 
 	.checkbox-row {
