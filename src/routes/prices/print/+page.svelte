@@ -17,6 +17,15 @@
 		return `₱${Number(sell).toLocaleString('en-PH')} per kilo`;
 	}
 
+	function latestPriceRecord(priceRows) {
+		const list = priceRows || [];
+		return [...list].sort((a, b) => {
+			const ta = new Date(a.effective_from || a.created_at || 0).getTime();
+			const tb = new Date(b.effective_from || b.created_at || 0).getTime();
+			return tb - ta;
+		})[0];
+	}
+
 	async function fetchProducts() {
 		isLoading = true;
 		try {
@@ -25,22 +34,23 @@
 				.select(`
 					id,
 					name,
-					quincees_prices(buy_price, created_at)
+					quincees_prices(buy_price, display_on_print, effective_from, created_at)
 				`)
 				.order('name');
 
 			if (error) throw error;
 
-			templateItems = (productsData || []).map((p) => {
-				const latest = [...(p.quincees_prices || [])].sort(
-					(a, b) => new Date(b.created_at) - new Date(a.created_at)
-				)[0];
+			templateItems = (productsData || []).flatMap((p) => {
+				const latest = latestPriceRecord(p.quincees_prices);
+				if (latest?.display_on_print === false) return [];
 				const buy = latest?.buy_price ?? 0;
-				return {
-					id: p.id,
-					name: p.name,
-					price: formatPriceFromBuy(buy)
-				};
+				return [
+					{
+						id: p.id,
+						name: p.name,
+						price: formatPriceFromBuy(buy)
+					}
+				];
 			});
 		} catch (e) {
 			console.error('Error loading products for prices:', e);

@@ -14,6 +14,7 @@
 	let editing = $state(null);
 	let formBuyPrice = $state('');
 	let formSellPrice = $state('');
+	let formDisplayOnPrint = $state(true);
 
 	let filteredRows = $derived(
 		rows.filter((r) => {
@@ -46,7 +47,7 @@
 					sku,
 					name,
 					category,
-					quincees_prices ( buy_price, sell_price, effective_from, created_at )
+					quincees_prices ( buy_price, sell_price, display_on_print, effective_from, created_at )
 				`
 				)
 				.order('name', { ascending: true });
@@ -59,13 +60,15 @@
 				const rawSell = latest?.sell_price;
 				const sell =
 					rawSell != null && rawSell !== '' ? Number(rawSell) : null;
+				const dop = latest?.display_on_print;
 				return {
 					id: p.id,
 					sku: p.sku,
 					name: p.name,
 					category: p.category,
 					buy_price: buy,
-					sell_price: sell != null && Number.isFinite(sell) ? sell : null
+					sell_price: sell != null && Number.isFinite(sell) ? sell : null,
+					display_on_print: dop !== false
 				};
 			});
 		} catch (e) {
@@ -105,6 +108,7 @@
 		formBuyPrice = row.buy_price > 0 ? String(row.buy_price) : '';
 		formSellPrice =
 			row.sell_price != null && row.sell_price > 0 ? String(row.sell_price) : '';
+		formDisplayOnPrint = row.display_on_print !== false;
 		isModalOpen = true;
 	}
 
@@ -123,8 +127,9 @@
 		return Number.isFinite(n) ? n : NaN;
 	}
 
-	function pricesUnchanged(newBuy, newSell, row) {
+	function pricesUnchanged(newBuy, newSell, newDisplay, row) {
 		if (newBuy !== row.buy_price) return false;
+		if (newDisplay !== row.display_on_print) return false;
 		const oldSell = row.sell_price;
 		if (newSell === oldSell) return true;
 		if (oldSell == null && newSell == null) return true;
@@ -155,7 +160,7 @@
 			return;
 		}
 
-		if (pricesUnchanged(buy, sell, editing)) {
+		if (pricesUnchanged(buy, sell, formDisplayOnPrint, editing)) {
 			isModalOpen = false;
 			return;
 		}
@@ -166,6 +171,7 @@
 				product_id: editing.id,
 				buy_price: buy,
 				sell_price: sell,
+				display_on_print: formDisplayOnPrint,
 				effective_from: new Date().toISOString()
 			});
 
@@ -234,6 +240,7 @@
 							<th>Category</th>
 							<th class="text-right">Buy / kilo</th>
 							<th class="text-right">Sell / kilo</th>
+							<th class="text-center col-print">Print</th>
 							<th class="text-right">Actions</th>
 						</tr>
 					</thead>
@@ -258,6 +265,13 @@
 									<span>{formatMoney(effectiveSell(row))}</span>
 									{#if sellUsesDefaultMarkup(row)}
 										<span class="sell-hint" title="No sell stored; using buy + ₱{RETAIL_MARKUP}">default</span>
+									{/if}
+								</td>
+								<td class="text-center" data-label="On print sheet">
+									{#if row.display_on_print !== false}
+										<span class="print-badge yes" title="Shown on print price sheet">Yes</span>
+									{:else}
+										<span class="print-badge no" title="Hidden from print price sheet">No</span>
 									{/if}
 								</td>
 								<td class="text-right actions-cell" data-label="Actions">
@@ -328,6 +342,14 @@
 					<p class="field-hint">
 						Leave blank to store no sell price (other screens use buy + ₱{RETAIL_MARKUP}). Saves one history row with both values.
 					</p>
+				</div>
+
+				<div class="form-group checkbox-row">
+					<label class="checkbox-label">
+						<input type="checkbox" bind:checked={formDisplayOnPrint} />
+						<span>Show on printed price sheet</span>
+					</label>
+					<p class="field-hint">When off, this product is hidden on /prices/print.</p>
 				</div>
 			</div>
 
@@ -528,6 +550,10 @@
 		font-variant-numeric: tabular-nums;
 	}
 
+	.text-center {
+		text-align: center;
+	}
+
 	.sell-cell {
 		display: flex;
 		align-items: center;
@@ -545,6 +571,50 @@
 		background: #f1f5f9;
 		padding: 0.12rem 0.4rem;
 		border-radius: 4px;
+	}
+
+	.col-print {
+		width: 5rem;
+	}
+
+	.print-badge {
+		display: inline-block;
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+		padding: 0.2rem 0.45rem;
+		border-radius: 6px;
+	}
+
+	.print-badge.yes {
+		color: #166534;
+		background: #dcfce7;
+	}
+
+	.print-badge.no {
+		color: #991b1b;
+		background: #fee2e2;
+	}
+
+	.checkbox-row {
+		padding-top: 0.25rem;
+	}
+
+	.checkbox-label {
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6rem;
+		font-weight: 600;
+		color: #334155;
+		cursor: pointer;
+	}
+
+	.checkbox-label input {
+		margin-top: 0.2rem;
+		width: 1.05rem;
+		height: 1.05rem;
+		accent-color: #0f172a;
 	}
 
 	.text-right {
