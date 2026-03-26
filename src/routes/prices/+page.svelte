@@ -13,6 +13,7 @@
 	let isSaving = $state(false);
 	let editing = $state(null);
 	let formBuyPrice = $state('');
+	let formSellPrice = $state('');
 
 	let filteredRows = $derived(
 		rows.filter((r) => {
@@ -45,7 +46,7 @@
 					sku,
 					name,
 					category,
-					quincees_prices ( buy_price, effective_from, created_at )
+					quincees_prices ( buy_price, sell_price, effective_from, created_at )
 				`
 				)
 				.order('name', { ascending: true });
@@ -55,12 +56,16 @@
 			rows = (data || []).map((p) => {
 				const latest = latestPriceRecord(p.quincees_prices);
 				const buy = latest?.buy_price != null ? Number(latest.buy_price) : 0;
+				const rawSell = latest?.sell_price;
+				const sell =
+					rawSell != null && rawSell !== '' ? Number(rawSell) : null;
 				return {
 					id: p.id,
 					sku: p.sku,
 					name: p.name,
 					category: p.category,
-					buy_price: buy
+					buy_price: buy,
+					sell_price: sell != null && Number.isFinite(sell) ? sell : null
 				};
 			});
 		} catch (e) {
@@ -81,15 +86,25 @@
 		return `₱${v.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 	}
 
-	function suggestedRetail(buy) {
-		const b = Number(buy) || 0;
-		if (b <= 0) return '—';
-		return formatMoney(b + RETAIL_MARKUP);
+	/** Stored sell, or buy + markup when none stored (for display). */
+	function effectiveSell(row) {
+		if (row.sell_price != null && Number.isFinite(row.sell_price) && row.sell_price > 0) {
+			return row.sell_price;
+		}
+		const b = Number(row.buy_price) || 0;
+		if (b > 0) return b + RETAIL_MARKUP;
+		return null;
+	}
+
+	function sellUsesDefaultMarkup(row) {
+		return row.sell_price == null && row.buy_price > 0;
 	}
 
 	function openEdit(row) {
 		editing = row;
 		formBuyPrice = row.buy_price > 0 ? String(row.buy_price) : '';
+		formSellPrice =
+			row.sell_price != null && row.sell_price > 0 ? String(row.sell_price) : '';
 		isModalOpen = true;
 	}
 
@@ -100,8 +115,28 @@
 		return Number.isFinite(n) ? n : NaN;
 	}
 
+	/** `null` = leave blank / use default elsewhere; `NaN` = invalid */
+	function parseSellInput() {
+		const raw = String(formSellPrice).replace(/,/g, '').trim();
+		if (raw === '') return null;
+		const n = Number.parseFloat(raw);
+		return Number.isFinite(n) ? n : NaN;
+	}
+
+	function pricesUnchanged(newBuy, newSell, row) {
+		if (newBuy !== row.buy_price) return false;
+		const oldSell = row.sell_price;
+		if (newSell === oldSell) return true;
+		if (oldSell == null && newSell == null) return true;
+		if (oldSell == null && newSell != null && row.buy_price > 0) {
+			return Math.abs(newSell - (row.buy_price + RETAIL_MARKUP)) < 0.005;
+		}
+		return false;
+	}
+
 	async function handleSave() {
 		const buy = parseBuyInput();
+		const sell = parseSellInput();
 		if (editing == null) return;
 		if (Number.isNaN(buy)) {
 			alert('Enter a valid buy price (number).');
@@ -111,9 +146,16 @@
 			alert('Buy price cannot be negative.');
 			return;
 		}
+		if (Number.isNaN(sell)) {
+			alert('Enter a valid sell price (number), or leave it blank.');
+			return;
+		}
+		if (sell != null && sell < 0) {
+			alert('Sell price cannot be negative.');
+			return;
+		}
 
-		const unchanged = buy === editing.buy_price;
-		if (unchanged) {
+		if (pricesUnchanged(buy, sell, editing)) {
 			isModalOpen = false;
 			return;
 		}
@@ -123,6 +165,7 @@
 			const { error } = await supabase.from('quincees_prices').insert({
 				product_id: editing.id,
 				buy_price: buy,
+				sell_price: sell,
 				effective_from: new Date().toISOString()
 			});
 
@@ -147,10 +190,9 @@
 <div class="container">
 	<header class="header" in:fly={{ y: -20, duration: 800, easing: quintOut }}>
 		<div class="header-left">
-			<h1>Buy prices</h1>
+			<h1>Prices</h1>
 			<p class="subtitle">
-				Update supplier buy prices per kilo. A new price row is recorded each time you save (effective from now).
-				Default customer sell price elsewhere is buy + ₱{RETAIL_MARKUP} when no custom price is set.
+				Set buy and sell per kilo. Each save adds a new row (effective from now). Leave sell blank to use buy + ₱{RETAIL_MARKUP} on screens that fall back to default.
 			</p>
 		</div>
 		<a href="/prices/print" class="print-link">Print price sheet</a>
@@ -191,7 +233,7 @@
 							<th>Product</th>
 							<th>Category</th>
 							<th class="text-right">Buy / kilo</th>
-							<th class="text-right hint">Suggested retail</th>
+							<th class="text-right">Sell / kilo</th>
 							<th class="text-right">Actions</th>
 						</tr>
 					</thead>
@@ -212,9 +254,14 @@
 									{/if}
 								</td>
 								<td class="text-right mono" data-label="Buy / kilo">{formatMoney(row.buy_price)}</td>
-								<td class="text-right mono muted" data-label="Suggested retail">{suggestedRetail(row.buy_price)}</td>
+								<td class="text-right mono sell-cell" data-label="Sell / kilo">
+									<span>{formatMoney(effectiveSell(row))}</span>
+									{#if sellUsesDefaultMarkup(row)}
+										<span class="sell-hint" title="No sell stored; using buy + ₱{RETAIL_MARKUP}">default</span>
+									{/if}
+								</td>
 								<td class="text-right actions-cell" data-label="Actions">
-									<button type="button" class="edit-btn" onclick={() => openEdit(row)}>Edit buy price</button>
+									<button type="button" class="edit-btn" onclick={() => openEdit(row)}>Edit prices</button>
 								</td>
 							</tr>
 						{/each}
@@ -241,7 +288,7 @@
 			role="presentation"
 		>
 			<header class="modal-header">
-				<h2>Update buy price</h2>
+				<h2>Update prices</h2>
 				<button type="button" class="close-btn" onclick={() => (isModalOpen = false)}>&times;</button>
 			</header>
 
@@ -265,14 +312,29 @@
 						class="price-input"
 						autocomplete="off"
 					/>
-					<p class="field-hint">Saves a new price effective immediately. Past prices stay in history.</p>
+				</div>
+
+				<div class="form-group">
+					<label for="sell-price">Sell price per kilo (₱)</label>
+					<input
+						id="sell-price"
+						type="text"
+						inputmode="decimal"
+						bind:value={formSellPrice}
+						placeholder="Optional"
+						class="price-input"
+						autocomplete="off"
+					/>
+					<p class="field-hint">
+						Leave blank to store no sell price (other screens use buy + ₱{RETAIL_MARKUP}). Saves one history row with both values.
+					</p>
 				</div>
 			</div>
 
 			<footer class="modal-footer">
 				<button type="button" class="btn-secondary" onclick={() => (isModalOpen = false)}>Cancel</button>
 				<button type="button" class="btn-primary" onclick={handleSave} disabled={isSaving}>
-					{isSaving ? 'Saving…' : 'Save price'}
+					{isSaving ? 'Saving…' : 'Save prices'}
 				</button>
 			</footer>
 		</div>
@@ -428,11 +490,6 @@
 		border-bottom: 1px solid #e2e8f0;
 	}
 
-	.prices-table th.hint {
-		font-weight: 500;
-		color: #94a3b8;
-	}
-
 	.prices-table td {
 		padding: 1rem 1.25rem;
 		border-bottom: 1px solid #f1f5f9;
@@ -471,8 +528,23 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	.muted {
+	.sell-cell {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 0.45rem;
+		flex-wrap: wrap;
+	}
+
+	.sell-hint {
+		font-size: 0.65rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
 		color: #64748b;
+		background: #f1f5f9;
+		padding: 0.12rem 0.4rem;
+		border-radius: 4px;
 	}
 
 	.text-right {
