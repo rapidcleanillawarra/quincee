@@ -9,8 +9,16 @@
 
 
 	let selectedAction = $state("");
-	let anySelected = $derived(orders.some(o => o.selected));
-	let allSelected = $derived(orders.length > 0 && orders.every(o => o.selected));
+	let statusFilter = $state("");
+	
+	let filteredOrders = $derived(
+		statusFilter === "" 
+			? orders 
+			: orders.filter(o => o.status?.toLowerCase() === statusFilter.toLowerCase())
+	);
+
+	let anySelected = $derived(filteredOrders.some(o => o.selected));
+	let allSelected = $derived(filteredOrders.length > 0 && filteredOrders.every(o => o.selected));
 
 	import { formatCurrency, formatDate } from './utils/format';
 
@@ -186,11 +194,24 @@
 		{:else}
 			{#if orders.length > 0}
 				<div class="actions-bar" in:fly={{ y: 20, duration: 600, delay: 100, easing: quintOut }}>
-					<select bind:value={selectedAction} class="action-select">
-						<option value="">Actions</option>
-						<option value="mark_paid">Mark as Paid</option>
-					</select>
-					<button onclick={handleApplyAction} disabled={!selectedAction || !anySelected} class="btn-secondary">Apply to Selected</button>
+					<div class="filters">
+						<select bind:value={statusFilter} class="filter-select" aria-label="Filter by status">
+							<option value="">All Statuses</option>
+							<option value="quoted">Quoted</option>
+							<option value="pending">Pending</option>
+							<option value="delivered">Delivered</option>
+							<option value="completed">Completed</option>
+							<option value="cancelled">Cancelled</option>
+						</select>
+					</div>
+
+					<div class="bulk-actions">
+						<select bind:value={selectedAction} class="action-select">
+							<option value="">Actions</option>
+							<option value="mark_paid">Mark as Paid</option>
+						</select>
+						<button onclick={handleApplyAction} disabled={!selectedAction || !anySelected} class="btn-secondary">Apply to Selected</button>
+					</div>
 				</div>
 			{/if}
 
@@ -211,7 +232,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each orders as order (order.id)}
+						{#each filteredOrders as order (order.id)}
 							<tr class:selected={order.selected}>
 								<td class="checkbox-cell" data-label="Select">
 									<input type="checkbox" bind:checked={order.selected} aria-label="Select order {order.id.slice(0, 8)}" />
@@ -374,6 +395,7 @@
 	.actions-bar {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: 1rem;
 		margin-bottom: 1.5rem;
 		padding: 1rem 1.5rem;
@@ -384,7 +406,13 @@
 		box-shadow: 0 4px 15px -5px rgba(0, 0, 0, 0.05);
 	}
 
-	.action-select {
+	.filters, .bulk-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.filter-select, .action-select {
 		padding: 0.6rem 1rem;
 		border-radius: 8px;
 		border: 1px solid #e2e8f0;
@@ -394,6 +422,17 @@
 		outline: none;
 		min-width: 150px;
 		font-weight: 500;
+		transition: all 0.2s;
+	}
+
+	.filter-select:hover, .action-select:hover {
+		border-color: #cbd5e1;
+		background: #f8fafc;
+	}
+
+	.filter-select:focus, .action-select:focus {
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 	}
 
 	.btn-secondary {

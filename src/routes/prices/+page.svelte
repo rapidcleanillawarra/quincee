@@ -1,17 +1,58 @@
 <script>
+	import { onMount } from 'svelte';
+	import { supabase } from '$lib/supabase';
+
 	let tableCount = $state(10);
 	let showModal = $state(false);
-	
-	let templateItems = $state([
-		{ name: 'talong', price: '₱70 per kilo' },
-		{ name: 'ahos', price: '₱140 per kilo' },
-		{ name: 'bumbay', price: '₱140 per kilo' },
-		{ name: 'carrots', price: '₱120 per kilo' },
-		{ name: 'patatas', price: '₱130 per kilo' },
-		{ name: 'luya', price: '₱60 per kilo' }
-	]);
+	let isLoading = $state(true);
+
+	let templateItems = $state([]);
 
 	let modalItems = $state([]);
+
+	function formatPriceFromBuy(buyPrice) {
+		const buy = Number(buyPrice) || 0;
+		const sell = buy > 0 ? buy + 15 : 0;
+		if (sell <= 0) return '—';
+		return `₱${Number(sell).toLocaleString('en-PH')} per kilo`;
+	}
+
+	async function fetchProducts() {
+		isLoading = true;
+		try {
+			const { data: productsData, error } = await supabase
+				.from('quincees_products')
+				.select(`
+					id,
+					name,
+					quincees_prices(buy_price, created_at)
+				`)
+				.order('name');
+
+			if (error) throw error;
+
+			templateItems = (productsData || []).map((p) => {
+				const latest = [...(p.quincees_prices || [])].sort(
+					(a, b) => new Date(b.created_at) - new Date(a.created_at)
+				)[0];
+				const buy = latest?.buy_price ?? 0;
+				return {
+					id: p.id,
+					name: p.name,
+					price: formatPriceFromBuy(buy)
+				};
+			});
+		} catch (e) {
+			console.error('Error loading products for prices:', e);
+			templateItems = [];
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	onMount(() => {
+		fetchProducts();
+	});
 
 	function openModal() {
 		modalItems = templateItems.map(item => ({ ...item }));
@@ -67,7 +108,7 @@
 				<button type="button" class="modal-close" onclick={closeModal} aria-label="Close">&times;</button>
 			</div>
 			<div class="modal-body">
-				{#each modalItems as item, i (item.name)}
+				{#each modalItems as item, i (item.id)}
 					<div class="price-row">
 						<label for="price-{i}">{item.name}</label>
 						<input type="text" id="price-{i}" bind:value={item.price}>
@@ -103,12 +144,22 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each templateItems as item (item.name)}
+								{#if isLoading}
 									<tr>
-										<td>{item.name}</td>
-										<td>{item.price}</td>
+										<td colspan="2">Loading…</td>
 									</tr>
-								{/each}
+								{:else if templateItems.length === 0}
+									<tr>
+										<td colspan="2">No products yet.</td>
+									</tr>
+								{:else}
+									{#each templateItems as item (item.id)}
+										<tr>
+											<td>{item.name}</td>
+											<td>{item.price}</td>
+										</tr>
+									{/each}
+								{/if}
 							</tbody>
 						</table>
 					</div>
@@ -421,6 +472,7 @@
 			display: flex;
 			flex-direction: column;
 			gap: 1mm;
+			break-inside: avoid;
 			page-break-inside: avoid;
 		}
 
@@ -428,6 +480,21 @@
 			flex: 1;
 			min-height: 0;
 			overflow: hidden;
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+
+		table tbody tr {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+
+		thead {
+			display: table-header-group;
+		}
+
+		tbody {
+			display: table-row-group;
 		}
 
 		.tile .header {

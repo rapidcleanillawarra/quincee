@@ -783,4 +783,38 @@ let totalToCollect = $derived.by(() =>
 		.legend { width: 100%; }
 		.profit-table-wrap { padding: 0 1rem 1.5rem; }
 	}
+
+	@media print {
+		.page-header {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+		.report-card {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+		.chart-layout {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+		.profit-table-wrap {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+		.profit-table thead {
+			display: table-header-group;
+		}
+		.profit-table tfoot {
+			display: table-footer-group;
+		}
+		.profit-table tbody tr,
+		.profit-table tfoot tr {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+		.legend-item {
+			break-inside: avoid;
+			page-break-inside: avoid;
+		}
+	}
 </style>
