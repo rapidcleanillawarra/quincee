@@ -73,13 +73,28 @@
 	async function handleSave() {
 		isSaving = true;
 		try {
-			const { error } = await supabase
-				.from('quincees_stocks')
-				.upsert({
-					product_id: editingStock.product_id,
-					quantity: formData.quantity,
-					updated_at: new Date().toISOString()
-				}, { onConflict: 'product_id' });
+			const prev = Number(editingStock.quantity) || 0;
+			const next = Number(formData.quantity) || 0;
+			const delta = next - prev;
+
+			if (delta === 0) {
+				isModalOpen = false;
+				return;
+			}
+
+			const movement_type = delta > 0 ? 'adjustment_in' : 'adjustment_out';
+			const { data: authData } = await supabase.auth.getUser();
+			const user = authData?.user;
+
+			const { error } = await supabase.from('quincees_stock_movements').insert({
+				product_id: editingStock.product_id,
+				movement_type,
+				quantity: delta,
+				reference_table: 'stocks_ui',
+				reference_id: null,
+				notes: `Manual adjustment: ${prev} → ${next}`,
+				created_by: user?.email ?? user?.id ?? null
+			});
 
 			if (error) throw error;
 
