@@ -280,6 +280,18 @@
 		return 'status-default';
 	}
 
+	/** @param {Record<string, unknown>} order */
+	function canReceiveOrder(order) {
+		const s = String(order.status || '').toLowerCase();
+		if (s === 'cancelled' || s === 'canceled') return false;
+		for (const line of itemsOf(order)) {
+			const q = Number(line.quantity) || 0;
+			const recv = receivedQtyForLine(order, String(line.id));
+			if (recv < q) return true;
+		}
+		return false;
+	}
+
 	onMount(() => {
 		fetchPurchaseOrders();
 	});
@@ -378,6 +390,7 @@
 							<th class="text-right">Ordered value</th>
 							<th>Created</th>
 							<th>Supplier ref.</th>
+							<th class="col-actions">Actions</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -407,10 +420,20 @@
 								<td class="text-right mono" data-label="Ordered value">{formatCurrency(orderedValue(order))}</td>
 								<td data-label="Created">{formatDate(order.created_at)}</td>
 								<td class="ref-cell" data-label="Supplier ref.">{order.supplier_reference ?? '—'}</td>
+								<td class="actions-cell" data-label="Actions">
+									<div class="action-btns">
+										<a href="/purchase-orders/{oid}/edit" class="action-btn action-edit">Edit</a>
+										{#if canReceiveOrder(order)}
+											<a href="/purchase-orders/{oid}/receive" class="action-btn action-receive">Receive</a>
+										{:else}
+											<span class="action-btn action-receive muted" title="Nothing left to receive or order is cancelled">Receive</span>
+										{/if}
+									</div>
+								</td>
 							</tr>
 							{#if expandedId === oid}
 								<tr class="detail-row">
-									<td colspan="7">
+									<td colspan="8">
 										<div class="detail-panel" transition:fade={{ duration: 150 }}>
 											{#if order.notes}
 												<div class="notes-block">
@@ -740,6 +763,64 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.col-actions {
+		width: 1%;
+		white-space: nowrap;
+	}
+
+	.action-btns {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		align-items: center;
+	}
+
+	.action-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.35rem 0.65rem;
+		border-radius: 8px;
+		font-size: 0.78rem;
+		font-weight: 700;
+		text-decoration: none;
+		border: 1px solid transparent;
+		cursor: pointer;
+		transition: background 0.15s, border-color 0.15s, color 0.15s;
+	}
+
+	.action-btn.action-edit {
+		background: #f1f5f9;
+		border-color: #e2e8f0;
+		color: #334155;
+	}
+
+	.action-btn.action-edit:hover {
+		background: #e2e8f0;
+		border-color: #cbd5e1;
+		color: #0f172a;
+	}
+
+	.action-btn.action-receive {
+		background: #2563eb;
+		border-color: #2563eb;
+		color: white;
+	}
+
+	.action-btn.action-receive:hover:not(.muted) {
+		background: #1d4ed8;
+		border-color: #1d4ed8;
+	}
+
+	.action-btn.muted {
+		opacity: 0.45;
+		cursor: not-allowed;
+		pointer-events: none;
+		background: #e2e8f0;
+		border-color: #cbd5e1;
+		color: #64748b;
 	}
 
 	.status-badge {
